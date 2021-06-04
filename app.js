@@ -10,7 +10,7 @@ app.use(bodyparser.json())
 
 // Database API mySql 
 pool = mysql.createConnection({
-    connectionLimit : 100,
+    connectionLimit : 10,
     host : 'localhost',
     user : 'root',
     password : '',
@@ -18,11 +18,16 @@ pool = mysql.createConnection({
 })
 
 app.get('', (req, res) =>{
-    pool.getConnection((err, con) => {
-        if(err) throw err;
-
-        res.send("Connected");
-    });
+    
+    console.log(pool);
+    pool.connect((err, con) =>{
+        if(!err){
+            res.send("cool")
+        }
+        else{
+            res.send("errr")
+        }
+    })
 });
 
 
