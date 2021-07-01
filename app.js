@@ -4,24 +4,33 @@ const bodyparser = require("body-parser");
 const mysql = require("mysql");
 const cors = require("cors")
 const app = express();
-const cookieParser = require("cookie-parser")
 const bcrypt = require("bcrypt")
 const saltRounds = 10 // used for Hashing length
 const jwt = require("jsonwebtoken");
-const fs = require("fs");
 const fileUpload = require("express-fileupload")
+
 //Routers of APIs
 const users = require('./routes/users')
+const annonces = require('./routes/annonces')
+const logements = require('./routes/logements')
+const depenses = require('./routes/depenses')
+const reclamations = require('./routes/reclamations')
+
 
 const port = 5001
-
 
 app.use(bodyparser.urlencoded({extended: true}));
 app.use(bodyparser.json())
 app.use(express.json())
 app.use(fileUpload())
 app.use(cors({origin : 'http://localhost:3000', credentials : true}))
+
+
 app.use("/users", users)
+app.use("/annonces", annonces)
+app.use("/logements", logements)
+app.use("/depenses", depenses)
+app.use("/reclamations", reclamations)
 
 // Database API mySql 
 pool = mysql.createPool({
@@ -33,13 +42,12 @@ pool = mysql.createPool({
 })
 
 
-
 ////// For Logging
 app.post('/', (req, res) => {
     const email = req.body.email
     const pwd = req.body.pwd
     if(email !== "" && pwd !== ""){
-        const SQLQuery = "select NumCompte, EmailCompte, Role, PasswordCompte from compte where EmailCompte = ? ;"
+        const SQLQuery = "select NumCompte, NomCompte, photo, EmailCompte, Role, PasswordCompte from compte where EmailCompte = ? ;"
         pool.query(SQLQuery, email, (err, result) => {
             if(err){
                 res.json({err : err})
@@ -47,7 +55,6 @@ app.post('/', (req, res) => {
             }
             if(result){
                 if(result.length > 0){
-                    //console.log(result[0])
                     bcrypt.compare(pwd, result[0].PasswordCompte, (error, response )=>{
                         if(error){ res.json({messageErr : error}) }
                         if(response){
@@ -56,7 +63,9 @@ app.post('/', (req, res) => {
                                 const EmailCompte = result[0].EmailCompte
                                 const Role = result[0].Role
                                 const PayLoad = {Num : NumCompte, Email : EmailCompte, Role : Role}
-                                const accessToken = jwt.sign(PayLoad, process.env.SECRETTOKEN)
+                                const accessToken = jwt.sign(PayLoad, process.env.SECRETTOKEN, {expiresIn : 60 * 60})
+
+                                req.headers['authorization'] = accessToken
                                 res.json({auth : true, data : result, token : accessToken})
                             }
                             else{
@@ -65,13 +74,13 @@ app.post('/', (req, res) => {
                         }
                         else{
                             res.send({msgErr : "Password or Email is incorrect !"})
-                            console.log("Password or Email is incorrect !")
+                            //console.log("Password or Email is incorrect !")
                         }
                     })
                 }
                 else{
                     res.send({msgErr : "Password or Email is incorrect !"})
-                    console.log("Password or Email is incorrect !")
+                    //console.log("Password or Email is incorrect !")
                 }
             }
             else{
@@ -81,6 +90,26 @@ app.post('/', (req, res) => {
         })
     }
 });
+
+
+app.get("/getData/", (req, res) => {
+    let token = req.headers['authorization']
+    if(!token){
+        try{
+            let decoded = jwt.verify(token, process.env.SECRETTOKEN)
+            console.log(decoded)
+            res.json({msg : "Valid Token"})
+        }
+        catch{
+            console.log("Not Authorized")
+            res.sendStatus(401)
+        }
+    }
+    else{
+        console.log("NULL")
+    }
+})
+
 
 
 ////// To RESET The PASSWORD 
@@ -95,13 +124,5 @@ app.post('/resetpwd', (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
 app.listen(port, ()=> console.log(`App running on ${port}`));
+

@@ -7,9 +7,11 @@ require("dotenv").config()
 const bodyparser = require("body-parser");
 const mysql = require("mysql");
 const cors = require("cors")
-const cookieParser = require("cookie-parser")
 const jwt = require("jsonwebtoken");
-const fs = require("fs");
+const {authToken, authRole} = require('./../middleware')
+
+const multer = require('multer')
+
 
 
 router.use(bodyparser.urlencoded({extended: true}));
@@ -18,91 +20,117 @@ router.use(express.json())
 router.use(fileUpload())
 router.use(cors({origin : 'http://localhost:3000', credentials : true}))
 
+
+
+
+router.route("/up/image")
+    .post((req, res) => {
+        if(req.files === null){
+            console.log("No Photos Okey then")
+        }
+
+        console.log(req.files)
+        /*const file = req.files.file 
+        console.log(file)
+        file.mv(`${__dirname}/../../Client/public/profile img/${file.name}`, (err) => {
+            if(err){
+                console.log(err)
+            }
+            console.log( "Nom du Fichier est : " + file.name)
+        })*/
+
+    })
+
+
 // Create New Account
-router.route("/new")
+router.route("/new", authRole("Administrateur"))
     .post((req, res, next) => {
         const nom = req.body.nom 
         const prenom = req.body.prenom
         const email = req.body.email
         const tele = req.body.tele 
         const role = req.body.role
-        const photo = req.files
         const fonc = req.body.fonc
         const pwd = nom + "@" + prenom 
 
-        if(photo !== null){
-            const file = req.files.file
-            file.mv(`${__dirname}/../Client/public/profile img/${file.name}`, (err) => {
-                if(err){
-                    console.log(err)
-                    return res.status(500)
-                }
-                res.json("Uploaded")
-            })
-        }
 
-
-        if(nom !== "" && prenom !== "" && email !== "" && tele !== "" && role !== "" && fonc !== "" ){
+        if(!req.files || Object.keys(req.files).length === 0 || req.files === null){
             bcrypt.hash(pwd, saltRounds, (err, hash) => {
                 if(err){
-                    console.log(err)
+                    console.log(" errrrrrrrr : ")
                 }
-                /*if(photo !== ""){
-                
-
-                    const SQLQuery = "insert into compte (NomCompte, PrenomCompte, Role, fonc, EmailCompte, telephone, PasswordCompte, photo) values (?, ?, ?, ?, ?, ?, ?, ?)"
-                    pool.query(SQLQuery, [nom, prenom, role, fonc, email, tele, hash, photo], (err, resolve) => {
-                        if(err){ res.json({messageErr : err}) }
-                        else{
-                            if(resolve){
-                                if(resolve.affectedRows != 0){
-                                    res.json({message : "Inserted"})
-                                }
-                            }
+                const SQLQuery = "insert into compte (NomCompte, PrenomCompte, Role, fonc, EmailCompte, telephone, PasswordCompte) values (?, ?, ?, ?, ?, ?, ?)"
+                pool.query(SQLQuery, [nom, prenom, role, fonc, email, tele, hash], (err, resolve) => {
+                    if(err){ 
+                        res.json({messageErr : err}) 
+                        console.log(err) 
+                    }
+                    
+                    if(resolve){
+                        console.log(resolve)
+                        if(resolve.affectedRows != 0){
+                            res.json({message : "Inserted"})
                         }
-                    })
-                }
-                else{*/
-                    const SQLQuery = "insert into compte (NomCompte, PrenomCompte, Role, fonc, EmailCompte, telephone, PasswordCompte) values (?, ?, ?, ?, ?, ?, ?)"
-                    pool.query(SQLQuery, [nom, prenom, role, fonc, email, tele, hash], (err, resolve) => {
+                    }
+                    
+                })
+            })
+        }
+        else{ 
+            let sampleFile = req.file.filename
+            console.log(sampleFile) 
+            let path = `${__dirname}/../../../Client/public/profile img/${sampleFile.name}`
+            
+            sampleFile.mv(path, (err) => {
+                console.log(path)
+                if(!err){
+                    const SQLQuery = "insert into compte (NomCompte, PrenomCompte, Role, fonc, EmailCompte, telephone, PasswordCompte, photo) values (?, ?, ?, ?, ?, ?, ?, ?)"
+                    pool.query(SQLQuery, [nom, prenom, role, fonc, email, tele, hash, sampleFile], (err, resolve) => {
                         if(err){ 
                             res.json({messageErr : err}) 
                             console.log(err) 
                         }
-                        
                         if(resolve){
                             console.log(resolve)
                             if(resolve.affectedRows != 0){
                                 res.json({message : "Inserted"})
                             }
                         }
-                        
                     })
-                //}
+                }
+                else{
+                    console.log("errrrr")
+                }
             })
-        }
-        else{
-            console.log("Required")
-        }
+        }        
     })
     
 
 // Listing Users
-router.route("/all")
+router.route("/all", authRole(["Administrateur"]))
     .get((req, res) => {
-        const sqlQuery = "select NumCompte, NomCompte, PrenomCompte, Role, EmailCompte, telephone, fonc, photo from compte order by NumCompte desc ;"   
-        pool.query(sqlQuery, (err, data) => {
-            if(!err){
-                if(data.length !== 0){
-                    res.json(data)
+        const token = req.headers['authorization']
+        //if(token.length > 150){
+            const sqlQuery = "select NumCompte, NomCompte, PrenomCompte, Role, EmailCompte, telephone, fonc, photo from compte order by NumCompte desc ;"   
+            pool.query(sqlQuery, (err, data) => {
+                if(!err){
+                    if(data.length !== 0){
+                        res.json(data)
+                    }
                 }
-            }
-            else{
-                res.json({msgErr : "No Users"})
-                
-            }
-        })
+                else{
+                    res.json({msgErr : "No Users"})
+                    
+                }
+            })
+        /*}
+        else{
+            res.json({authorization : false})
+        }*/
+        
     })
+
+
 // Searching users By ... 
 router.route("/:search")
     .get((req, res) => {
@@ -124,6 +152,24 @@ router.route("/:search")
                 }
             })
         }
+    })
+
+// Find User by His Email :
+router.route("/byEmail/:email")
+    .get((req, res) => {
+        const email = req.params.email
+        const sqlQuery = "select EmailCompte from Compte where EmailCompte = ? ;"
+        pool.query(sqlQuery, email, (err, data) => {
+            if(err){
+                res.send({msg : "err"})
+            }
+            if(data.length > 0){
+                res.send({msg : "Déjà Utilisé !"})
+            }
+            else{
+                res.send({msg : "Cooool"})
+            }
+        })
     })
 
 
@@ -150,44 +196,28 @@ router.route("/user/:id")
 router.route("/edit/:id")
     .put((req, res) => {
         const id = req.params.id
-        const { nom, prenom, fon, tele, role, photo } = req.body
-        if(photo === ""){
-            const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, Role = ?, fonc = ?, telephone = ? where NumCompte = ${id} ;`
-            pool.query(sqlQuery, [nom, prenom, fon, tele, role, id], (err, resolve) => {
-                if(err) console.log(err)
+        const nom = req.body.nom 
+        const prenom = req.body.prenom 
+        const fon = req.body.fon 
+        const tele = req.body.tele 
+        const role = req.body.role 
+
+        if(id !== "" && nom !== "" && prenom !== "" && fon !== "" && tele !== "" && role !== ""){
+            const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, fonc = ?, telephone = ?, Role = ? where NumCompte = ${id} ;`
+            pool.query(sqlQuery, [nom, prenom, fon, tele, role], (err, resolve) => {
+                if(err) {
+                    res.json({err : "Not Updated"})
+                }
                 if(resolve){
-                    console.log(resolve)
-                    if(resolve.changedRows != 0){
+                    if(resolve.affectedRows != 0){
                         res.json({message : "Updated Successfully"})
-                        console.log("Updated")
                     }
                     else{
                         res.json({messageErr : "Update Failed"})
-                        console.log("Failed")
                     }
                 }
                 else{
-                    res.json({message : "err"})
-                    console.log("err")
-                }
-            })
-        }
-        else{
-            const sqlQuery = "update compte set NomCompte = ?, PrenomCompte = ?, Role = ?, fonc = ?, telephone = ?, photo = ? where NumCompte = ? ;"
-            pool.query(sqlQuery, [nom, prenom, fon, tele, role, id], (err, resolve) => {
-                if(err) console.log(err)
-                if(resolve){
-                    if(resolve.changedRows != 0){
-                        res.json({message : "Updated Successfully"})
-                        console.log("Upda")
-                    }
-                    else{
-                        res.json({messageErr : "Update Failed"})
-                        console.log("fai")
-                    }
-                }
-                else{
-                    console.log("error")
+                    res.json({messageErr : "err"})
                 }
             })
         }
@@ -196,14 +226,14 @@ router.route("/edit/:id")
 
 // Delete User 
 router.route("/delete/:id")
-    .delete((req, res) => {
+    .delete((req, res, next) => {
         const id = req.params.id
         const sqlQuery = "delete from compte where NumCompte = ? ;"
         pool.query(sqlQuery, id, (err, resolve) => {
             if(err) res.json({err : err})
             if(resolve){
-                console.log(resolve)
                 res.json({data : resolve})
+                next()
             }
         })
     })
