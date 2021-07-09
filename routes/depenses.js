@@ -71,17 +71,12 @@ router.route("/categorie/all")
 //// ENREGISTRER UNE Dépense 
 router.route("/new")
     .post((req, res) => {
-        const id = req.body.id
-        const cate = req.body.typeDep
-        const date = req.body.selectedDate
-        const montant = req.body.montant
-        const fac = req.body.fact 
-        const desc = req.body.detail 
-        console.log(id)
-        if(id !== "" && cate !== "" && montant !== "" && fac !== "" && desc !== ""){
-            if(date !== null){
+        const {id, typeDepense, date, montant, fact, detail} = req.body
+        //console.log(`id : ${id} et  dep : ${typeDepense}  et date  :  ${date}   et   montant :  ${montant}  et  ${fact}  et  detailllss :  ${detail}`)
+        if(id !== "" && typeDepense !== "" && montant !== "" && fact !== "" && detail !== ""){
+            if(date !== null || date !== undefined){
                 sqlQuery = "insert into depense (NumCompte, NomCategorie, dateDepense, MontantDepense, facture, descriptionDepense) values (?, ?, ?, ?, ?, ?) ;"
-                pool.query(sqlQuery, [id, cate, date, montant, fac, desc], (err, resolve) => {
+                pool.query(sqlQuery, [id, typeDepense, date, montant, fact, detail], (err, resolve) => {
                     if(err){
                         console.log(err)
                         res.json({err : err})
@@ -98,7 +93,7 @@ router.route("/new")
             }
             else{
                 sqlQuery = "insert into depense (NumCompte, NomCategorie, MontantDepense, facture, descriptionDepense) values (?, ?, ?, ?, ?) ;"
-                pool.query(sqlQuery, [id, cate, montant, fac, desc], (err, resolve) => {
+                pool.query(sqlQuery, [id, typeDepense, montant, fact, detail], (err, resolve) => {
                     if(err){
                         console.log(err)
                         res.json({err : err})
@@ -120,7 +115,121 @@ router.route("/new")
 //// Lister All Dépenses
 router.route("/all")
     .get((req, res) => {
-
+        const token = req.headers['authorization']
+        if(token.length > 150){
+            const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' order by d.RefDepense desc ;"
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    res.json("Failed to load Data")
+                }
+                if(data){
+                    if(data.length !== 0){
+                        res.json( data )
+                        //console.log(data[0])
+                    }
+                    else{
+                        res.json({msggg : "No Annonce"})
+                    }
+                }
+            })
+        }
+        else{
+            res.json({msgErr : "No Token Set"})
+        }
     })
+
+
+//// Search dépense by ...
+router.route("/all")
+    .get((req, res) => {
+        const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' order by d.RefDepense desc ;"
+        pool.query(sqlQuery, (err, resolve) => {
+            if(err){
+                res.json({err : "Failed to load les dépenses"})
+            }
+            if(resolve){
+                //console.log(resolve)
+                res.json(resolve)
+            }
+        })
+    })
+
+
+
+
+
+///// Get Dépense by RefDépense 
+router.route("/depense/:refDepense")
+    .get((req, res) => {
+        const refDepense = req.params.refDepense
+        if(refDepense){
+            const sqlQuery = `select c.NomCompte, c.PrenomCompte, c.fonc, d.MontantDepense, d.descriptionDepense, d.NomCategorie, d.facture from depense d, compte c where d.NumCompte = c.NumCompte and RefDepense = ${refDepense} ;`
+            pool.query(sqlQuery, (err, resolve) => {
+                if(err){
+                    res.json({msgErr : "Err"})
+                }
+                if(resolve.length > 0){
+                    res.json(resolve)
+                }
+                else{
+                    res.json({msgErr : "Not Found"})
+                }
+            })
+        }
+    })
+
+/////// UPDATE Dépense 
+router.route("/edit/:refDepense")
+    .put((req, res) => {
+        const refDepense = req.params.refDepense
+        const {montant, fac, desc} = req.body
+        //console.log("montant  :  " + montant + "   fac :  " + fac + "   desc : " + desc)
+        const sqlQuery = `update depense set MontantDepense = ?, facture = ?, descriptionDepense = ? where RefDepense = ${refDepense};`
+        pool.query(sqlQuery, [montant, fac, desc], (err, resolve) => {
+            if(err) {
+                res.json({err : "Not Updated"})
+            }
+            if(resolve){
+                if(resolve.affectedRows != 0){
+                    res.json({message : "Updated Successfully"})
+                }
+                else{
+                    res.json({messageErr : "Update Failed"})
+                }
+            }
+            else{
+                res.json({messageErr : "err"})
+            }
+        })
+    })
+
+
+/////// Delete Dépense
+router.route("/delete/:refDepense")
+    .delete((req, res, next) => {
+        const refDepense = req.params.refDepense
+        const sqlQuery = `delete from depense where RefDepense = ${refDepense} ;`
+        pool.query(sqlQuery, async (err, resolve) => {
+            if(err){
+                console.log(err)
+                res.json(err)
+            }
+            if(resolve){
+                if(resolve.message){
+                    res.json("Deleted ALL")
+                    next()
+                }
+            }
+            else{
+                res.json("No Resolving")
+            }
+        })
+    })
+
+
+
+
+
+
 
 module.exports = router

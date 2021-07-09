@@ -22,11 +22,12 @@ router.route('/new')
 
     })
 
+//// Lister All Réclamations :
 router.route('/all')
     .get((req, res) => {
         const token = req.headers['authorization']
         //if(token.length > 150){
-            const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour from compte c, logement l, reclamation r where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement order by r.RefReclamation desc"   
+            const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement order by r.RefReclamation desc"   
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
                     if(data.length > 0){
@@ -70,5 +71,82 @@ router.route("/:search")
     }
 })
 
+
+//// Réclamation by RefReclamation
+router.route("/reclamation/:refReclamation")
+    .get((req, res) => {
+        const refReclamation = req.params.refReclamation
+        const sqlQuery = `select r.RefReclamation, c.NomCompte, c.PrenomCompte, c.photo, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour from compte c, logement l, reclamation r where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and r.RefReclamation = ${refReclamation};`
+        pool.query(sqlQuery, (err, data) => {
+            if(err){
+                res.json({msgErr : "Err"})
+            }
+            if(data.length > 0){
+                res.json(data)
+            }
+            else{
+                res.json({msgErr : "Not Found"})
+            }
+        })
+    })
+
+
+/////// UPDATE réclamation 
+router.route("/edit/:refReclamation")
+    .put((req, res) => {
+        const refReclamation = req.params.refReclamation
+        const etat = req.body.etat
+        const sqlQuery = `update reclamation set statut = ? where RefReclamation = ${refReclamation};`
+        if(etat !== undefined && etat !== ""){
+            pool.query(sqlQuery, [etat], (err, resolve) => {
+                if(err) {
+                    res.json({err : "Not Updated"})
+                }
+                if(resolve){
+                    if(resolve.affectedRows != 0){
+                        res.json({message : "Updated Successfully"})
+                    }
+                    else{
+                        res.json({messageErr : "Update Failed"})
+                    }
+                }
+                else{
+                    res.json({messageErr : "err"})
+                }
+            })
+        }
+        else{
+            res.json({empty : "Champs Obligatoires !"})
+        }
+    })
+
+/////// RECLAMATION BY REFLOGEMENT 
+router.route('/logement/:refLogement')
+    .get((req, res) => {
+        const token = req.headers['authorization']
+        //if(token.length > 150){
+            const refLogement = req.params.refLogement
+            const sqlQuery = `select r.RefReclamation, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where l.RefLogement = r.RefLogement and l.RefLogement = '${refLogement}' order by r.RefReclamation desc ;`   
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    console.log("No Réclamation for U")
+                    res.json({msgErr : err})
+                }
+                else{
+                    if(data.length > 0){
+                        res.json(data)
+                    }
+                    else{
+                        res.json("No Reclamation")
+                    }
+                    
+                }
+            })
+        /*}
+        else{
+            console.log("No token !!")
+            res.json({msgErr : "No Token Set"})
+        }*/
+    })
 
 module.exports = router

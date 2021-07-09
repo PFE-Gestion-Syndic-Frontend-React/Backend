@@ -53,8 +53,10 @@ router.route("/new")
             const sqlQuery = "insert into logement (RefLogement, type, NumCompteCop) values (?, ?, ?)"
             pool.query(sqlQuery, [refLog, type, user], (err, resolve) => {
                 if(err){ 
-                    res.json({messageErr : err}) 
-                    console.log(err) 
+                    if(err.sqlMessage === `Duplicate entry '${refLog}' for key 'PRIMARY'`){
+                        res.json({messageErr : "le Logement est Déjà Inseré !"}) 
+                        //console.log("le Logement est Déjà Inseré !") 
+                    }
                 }
                 try{
                     if(resolve){
@@ -68,7 +70,7 @@ router.route("/new")
                     }
                 }
                 catch{
-                    res.json({mssg : "le Logement est Déjà Inseré !"})
+                    res.json({messageErr : "le Logement est Déjà Inseré !"})
                 }
             })
         }
@@ -89,15 +91,31 @@ router.route("/all")
         })
     })
 
+//// copropriétaire ByEmail     
+router.route("/Coproprietaire/byEmail")
+    .get((req, res) => {
+        const sqlQuery = "select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte from compte c where c.Role = 'Copropriétaire' order by c.NumCompte desc ;"
+        pool.query(sqlQuery, (err, resolve) => {
+            if(err){
+                res.json({err : err})
+            }
+            if(resolve){
+                //console.log(resolve)
+                res.json(resolve)
+            }
+        })
+    })
+
+
 // Searching users By ... 
 router.route("/:search")
     .get((req, res) => {
         const search = req.params.search
         if(search !== ""){
-            const sqlQuery = `select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, l.RefLogement from compte c, logement l where c.NumCompte = l.NumCompteCop and c.Role = 'Copropriétaire'and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or c.EmailCompte like '%${search}%' or c.telephone like '%${search}%' or l.RefLog like '%${search}%') order by c.NumCompte desc ;`
+            const sqlQuery = `select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, l.RefLogement from compte c, logement l where c.NumCompte = l.NumCompteCop and c.Role = 'Copropriétaire' and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or c.EmailCompte like '%${search}%' or c.telephone like '%${search}%' or l.RefLogement like '%${search}%') order by c.NumCompte desc ;`
             pool.query(sqlQuery, (err, data) => {
                 if(err){
-                    res.json("Failed to load Data")
+                    res.json(err)
                 }
                 if(data){
                     if(data.length !== 0){
@@ -111,5 +129,86 @@ router.route("/:search")
             })
         }
     })
+
+///// Copropriétaire INFO et Logement
+router.route("/coproprietaire/:refLogement")
+    .get((req, res) => {
+        const refLogement = req.params.refLogement
+        if(refLogement !== ""){
+            const sqlQuery = `select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, c.photo, l.RefLogement from compte c, logement l where c.NumCompte = l.NumCompteCop and c.Role = 'Copropriétaire' and l.RefLogement = ? order by c.NumCompte desc ;`
+            pool.query(sqlQuery, refLogement, (err, data) => {
+                if(err){
+                    res.json(err)
+                }
+                if(data){
+                    if(data.length !== 0){
+                        res.json( data )
+                    }
+                    else{
+                        res.json({msggg : "No Logements"})
+                    }
+                }
+            })
+        }
+    })
+
+
+////// Modifier Logement copropriétaire
+router.route('/edit/:refLogement')
+    .put((req, res) => {
+        const refLogement = req.params.refLogement
+        const coproprietaire = req.body.num
+        if(refLogement !== "" && coproprietaire !== ""){
+            const sqlQuery = `update logement set NumCompteCop = ? where RefLogement = '${refLogement}' ;`
+            pool.query(sqlQuery, parseInt(coproprietaire), (err, resolve) =>{
+                if(err){
+                    res.json(err)
+                    console.log(err)
+                }
+                if(resolve){
+                    if(resolve.affectedRows != 0){
+                        res.json({message : "Inserted"})
+                    }
+                    else{
+                        res.json({messageErr : "bad"})
+                    }
+                }
+            })
+        }
+    })
+
+
+///// Details of cotisations of logement
+router.route('/info/:refLogement')
+    .get((req, res) => {
+        const token = req.headers['authorization']
+        /*if(token !== undefined && token !== ""){
+            if(token.length > 150){*/
+                const refLogement = req.params.refLogement
+                const sqlQuery = `CALL data_Cotisation_Bylogement('${refLogement}') ;`  
+                pool.query(sqlQuery, (err, response) => {
+                    if(!err){
+                        if(response.length !== 0){
+                            console.log(response)
+                            res.json(response)
+                        }
+                    }
+                    else{
+                        console.log("No Paiements")
+                        res.json({msgErr : "No Paiements"})
+                    }
+                })
+            /*}
+            else{
+                console.log("Invalid Token")
+                res.json({msgErr : "Invalid Token"})
+            }
+        }
+        else{
+            console.log("No Token at all")
+            res.json({msgErr : "No Token at all"})
+        }*/
+    })
+
 
 module.exports = router

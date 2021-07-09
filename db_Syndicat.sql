@@ -59,3 +59,59 @@ alter table depense add CONSTRAINT fk_dep_cat FOREIGN KEY (NomCategorie) REFEREN
 
 alter table depense add CONSTRAINT fk_dep_compte FOREIGN KEY (NumCompte) REFERENCES compte(NumCompte)
 
+
+
+
+DELIMITER $$
+	create procedure inert_paiement_cheque(IN paied varchar(50), IN log varchar(30), IN id int, IN mois int, IN methode varchar(10), IN montant double, IN NumeroCheque varchar(30), IN bnq varchar(30))
+	begin
+		insert into paiement (RefPaiement, RefLogement, NumCompte, NbrMois, MethodePaiement, Montant) values (paied, log, id, mois, methode, montant);
+		insert into cheque (RefPaiement, Banque, NumeroCheque) values (paied, bnq, NumeroCheque);
+	END $$
+DELIMITER ;
+
+
+
+
+DELIMITER $$
+begin
+DECLARE duu date DEFAULT '2021-01-01';
+ if(SELECT duu = date_add(c.Au, INTERVAL 1 month) FROM calendrier c, paiement p where c.RefPaiement = p.RefPaiement AND p.RefLogement = old.RefLogement order by c.RefCalendrier DESC LIMIT 1)
+ insert INTO calendrier (RefPaiement, Du, Au) VALUES (old.RefPaiement, duu, date_add(duu, INTERVAL old.NbrMois month));
+ELSE
+insert INTO calendrier (RefPaiement, Du, Au) VALUES (old.RefPaiemant, '2021-01-01', date_add('2021-01-01', INTERVAL old.NbrMois));
+end $$
+DELIMITER ;
+
+
+
+
+DELIMITER $$
+	create procedure inert_paiement_cheque(IN paied varchar(50), IN log varchar(30), IN id int, IN mois int, IN methode varchar(10), IN montant double, IN NumeroCheque varchar(30), IN bnq varchar(30))
+	begin
+		DECLARE duu VARCHAR(40);
+		insert into paiement (RefPaiement, RefLogement, NumCompte, NbrMois, MethodePaiement, Montant) values (paied, log, id, mois, methode, montant);
+		insert into cheque (RefPaiement, Banque, NumeroCheque) values (paied, bnq, NumeroCheque);
+		if (SELECT date_add(c.Au, INTERVAL 1 month) FROM calendrier c, paiement p where c.RefPaiement = p.RefPaiement AND p.RefLogement = RefLogement order by c.RefCalendrier DESC LIMIT 1)
+			insert INTO calendrier (RefPaiement, Du, Au) VALUES (RefPaiement, '2021-09-09', date_add('2021-09-09', INTERVAL NbrMois month));
+		ELSE
+			insert INTO calendrier (RefPaiement, Du, Au) VALUES (RefPaiemant, '2021-09-09', date_add('2021-09-09', INTERVAL NbrMois month));
+	END $$
+DELIMITER ;
+
+
+SELECT p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque 
+from compte co, cheque c right JOIN 
+paiement p on c.RefPaiement = p.RefPaiement 
+INNER JOIN calendrier cal on cal.RefPaiement = p.RefPaiement 
+WHERE co.Role = 'Copropriétaire' AND 
+co.NumCompte IN (SELECT NumCompteCop from logement) 
+and p.RefLogement in (SELECT RefLogement FROM logement) ORDER by p.RefPaiement DESC	
+
+
+	select p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque  from compte co, calendrier cal, cheque c right join paiement p on c.RefPaiement = p.RefPaiement where co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement) and cal.RefPaiement = p.RefPaiement
+
+	select p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque  from compte co, calendrier cal, cheque c right join paiement p on c.RefPaiement = p.RefPaiement where co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement) and cal.RefPaiement = p.RefPaiement  ORDER BY p.RefPaiement DESC;
+
+
+
