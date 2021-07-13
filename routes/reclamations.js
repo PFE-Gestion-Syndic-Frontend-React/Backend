@@ -19,7 +19,30 @@ router.use(cors({origin : 'http://localhost:3000', credentials : true}))
 
 router.route('/new')
     .post((req, res) => {
-
+        const {log, objet, message, pour} = req.body
+        //console.log("id : ", typeof(id), "  Objet : ", objet, "  mes : ", message, " Pour : ", pour)
+        if(log !== "" && objet !== "" && message !== ""){
+            const sqlQuery = "call insert_Rec(?, ?, ?, ?)"
+            pool.query(sqlQuery, [log, objet, message, pour], (err, data) => {
+                if(err){
+                    if(err.sqlMessage === 'CONSTRAINT `pour_val` failed for `db_syndicat`.`reclamation`'){
+                        res.send('No Pour')
+                    }
+                    else{
+                        res.send(err)
+                    }
+                }
+                if(data){
+                    if(data.affectedRows !== 0){
+                        res.send("Inserted")
+                    }
+                    else{
+                        res.send(data)
+                    }
+                    console.log(data)
+                }
+            })
+        }
     })
 
 //// Lister All Réclamations :
@@ -48,28 +71,29 @@ router.route('/all')
         }*/
     })
 
-// Searching réclamations By ... 
-router.route("/:search")
-.get((req, res) => {
-    const search = req.params.search
-    if(search !== ""){
-        const sqlQuery = `select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour from compte c, logement l, reclamation r where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or r.Objet like '%${search}%' or r.Message like '%${search}%' or r.pour like '%${search}%' or r.statut like '%${search}%' ) order by a.RefAnnonce desc ;`
-        pool.query(sqlQuery, (err, data) => {
-            if(err){
-                res.json("Failed to load Data")
-            }
-            if(data){
-                if(data.length !== 0){
-                    res.json( data )
-                    //console.log(data[0])
+////////////// Réclamations pour les COPROPRIETAIRES ////////
+router.route('/cops/all/:id')
+    .get((req, res) => {
+        const id = req.params.id
+        if(id !== undefined){
+            const sqlQuery = "call recla_public(?)"
+            pool.query(sqlQuery, id, (err, data) => {
+                if(err){
+                    res.send(err)
+                    console.log(err)
                 }
-                else{
-                    res.json({msggg : "No Annonce"})
+                if(data){
+                    if(data.length > 0){
+                        res.send(data)
+                        //console.log(data)
+                    }
+                    else{
+                        res.send("data : ", data)
+                    }
                 }
-            }
-        })
-    }
-})
+            })
+        }
+    })
 
 
 //// Réclamation by RefReclamation
@@ -148,5 +172,29 @@ router.route('/logement/:refLogement')
             res.json({msgErr : "No Token Set"})
         }*/
     })
+
+
+// Searching réclamations By ... 
+router.route("/:search")
+.get((req, res) => {
+    const search = req.params.search
+    if(search !== ""){
+        const sqlQuery = `select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour from compte c, logement l, reclamation r where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or r.Objet like '%${search}%' or r.Message like '%${search}%' or r.pour like '%${search}%' or r.statut like '%${search}%' ) order by r.RefReclamation desc ;`
+        pool.query(sqlQuery, (err, data) => {
+            if(err){
+                res.send(err)
+            }
+            if(data){
+                if(data.length !== 0){
+                    res.send( data )
+                }
+                else{
+                    res.json({msggg : "No Réclamation"})
+                }
+            }
+        })
+    }
+})
+
 
 module.exports = router

@@ -211,4 +211,27 @@ router.route('/info/:refLogement')
     })
 
 
+//////// Find Log By NumCoproprietaire ///
+router.route('/copro/NumCompte/:id')
+    .get((req, res) => {
+        const id = req.params.id
+        if(id !== undefined && id !== null && id !== ""){
+            const sqlQuery = `SELECT l.RefLogement FROM logement l, compte c WHERE l.NumCompteCop = c.NumCompte AND c.NumCompte = '${id}' ORDER BY l.RefLogement LIMIT 1`
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    return res.send(err)
+                }
+                if(data.length > 0) res.send(data[0].RefLogement)
+                else{
+                    res.send("Id Invalid")
+                }
+            })
+        }
+    })
+
+
+
+
+
+
 module.exports = router

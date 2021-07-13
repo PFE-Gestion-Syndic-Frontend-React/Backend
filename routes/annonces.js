@@ -14,22 +14,22 @@ router.use(cors({origin : 'http://localhost:3000', credentials : true}))
 
 
 ///// ENREGISTRER UNE ANNONCE
-router.route("/new")
+router.route("/new/:id")
     .post((req, res) => {
-        const {id, sujet, descripAnnonce} = req.body
+        const { sujet, descripAnnonce} = req.body
+        const id = req.params.id
         if(id !== "" && sujet !== "" && descripAnnonce !== ""){
-            const sqlQuery = "insert into annonce (NumCompte, Sujet, DescripAnnonce) values (?, ?, ?)"
-            pool.query(sqlQuery, [id, sujet, descripAnnonce], (err, resolve) => {
+            const sqlQuery = `insert into annonce (NumCompte, Sujet, DescripAnnonce) values (${id} , ?, ?)`
+            pool.query(sqlQuery, [sujet, descripAnnonce], (err, resolve) => {
                 if(err){ 
-                    res.json({messageErr : err}) 
-                    console.log(err) 
+                    return res.send("Failed") 
                 }
                 if(resolve){
                     if(resolve.affectedRows != 0){
-                        res.json({message : "Inserted"})
+                        res.send("Inserted")
                     }
                     else{
-                        res.json({messageErr : "bad"})
+                        res.send("bad")
                     }
                 }
             })
@@ -42,7 +42,7 @@ router.route('/all')
     .get((req, res) => {
         const token = req.headers['authorization']
         if(token.length > 150){
-            const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce from compte c, annonce a where a.NumCompte = c.NumCompte order by a.RefAnnonce desc"   
+            const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte order by a.RefAnnonce desc"   
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
                     if(data.length !== 0){
@@ -72,7 +72,7 @@ router.route("/:search")
     const token = req.headers['authorization']
     if(token.length > 150){
         if(search !== ""){
-            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce from compte c, annonce a where a.NumCompte = c.NumCompte and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`
+            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`
             pool.query(sqlQuery, (err, data) => {
                 if(err){
                     res.json("Failed to load Data")
@@ -99,11 +99,10 @@ router.route('/all/statut/true')
     .get((req, res) => {
         const token = req.headers['authorization']
         if(token.length > 150){
-            const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce from compte c, annonce a where a.NumCompte = c.NumCompte  and a.statut = 1 order by a.RefAnnonce desc"   
+            const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 order by a.RefAnnonce desc"   
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
                     if(data.length !== 0){
-                        //console.log(data)
                         res.json(data)
                     }
                 }
@@ -126,11 +125,10 @@ router.route('/all/statut/true/:search')
         const token = req.headers['authorization']
         if(token.length > 150){
             const search = req.params.search
-            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce from compte c, annonce a where a.NumCompte = c.NumCompte  and a.statut = 1 and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`   
+            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce, d.contenuDocument from compte c, document d right join annonce a on a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`   
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
-                    if(data.length !== 0){
-                        //console.log(data)
+                    if(data.length > 0){
                         res.json(data)
                     }
                 }
@@ -174,46 +172,47 @@ router.route("/annonce/:refAnnonce")
 router.route("/edit/:refAnnonce")
     .put((req, res) => {
         const refAnnonce = req.params.refAnnonce
-        const sjt = req.body.sujet 
-        const descrip = req.body.descrip
-        const sqlQuery = `update annonce set Sujet = ?, DescripAnnonce = ? where RefAnnonce = ${refAnnonce};`
-        pool.query(sqlQuery, [sjt, descrip], (err, resolve) => {
-            if(err) {
-                res.json({err : "Not Updated"})
-            }
-            if(resolve){
-                if(resolve.affectedRows != 0){
-                    res.json({message : "Updated Successfully"})
+        const {sujet, descrip, statut } = req.body 
+        if(sujet !== "" && descrip !== ""){
+            const sqlQuery = `update annonce set Sujet = ?, DescripAnnonce = ?, statut = ?  where RefAnnonce = ${refAnnonce};`
+            pool.query(sqlQuery, [sujet, descrip, parseInt(statut)], (err, resolve) => {
+                if(err) {
+                    res.json({err : "Not Updated"})
+                }
+                if(resolve){
+                    if(resolve.affectedRows != 0){
+                        res.json({message : "Updated Successfully"})
+                    }
+                    else{
+                        res.json({messageErr : "Update Failed"})
+                    }
                 }
                 else{
-                    res.json({messageErr : "Update Failed"})
+                    res.json({messageErr : "err"})
                 }
-            }
-            else{
-                res.json({messageErr : "err"})
-            }
-        })
+            })
+        }
     })
 
 
 ////// Delete Annonce 
 router.route("/delete/:refAnnonce")
-    .delete((req, res, next) => {
+    .delete((req, res) => {
         const refAnnonce = req.params.refAnnonce
         const sqlQuery = `delete from annonce where RefAnnonce = ${refAnnonce} ;`
         pool.query(sqlQuery, async (err, resolve) => {
             if(err){
-                console.log(err)
-                res.json(err)
+                if(err.sqlMessage === `Unknown column '${refAnnonce}' in 'where clause'`){
+                    return res.send("Err")
+                }
             }
             if(resolve){
                 if(resolve.message){
-                    res.json("Deleted ALL")
-                    next()
+                    return res.json("Deleted ALL")
                 }
             }
             else{
-                res.json("No Resolving")
+                return res.json("No Resolving")
             }
         })
     })

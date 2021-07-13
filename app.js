@@ -7,10 +7,8 @@ const app = express();
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken");
 const fs = require('fs')
-const multer = require('multer');
-const path = require('path')
-
-const storage = multer.diskStorage({
+const fileupload = require('express-fileupload')
+/*const storage = multer.diskStorage({
     destination : (req, file, cb) => {
         cb(null, path.join(__dirname, "public/annonces pics"))
     },
@@ -18,7 +16,7 @@ const storage = multer.diskStorage({
         cb(null, new Date().toISOString() + "-" + file.originalname)
     }
 })
-const upload = multer({ storage : storage })
+const upload = multer({ storage : storage })*/
 
 
 //Routers of APIs
@@ -28,7 +26,8 @@ const logements = require('./routes/logements')
 const depenses = require('./routes/depenses')
 const reclamations = require('./routes/reclamations')
 const cotisations = require('./routes/cotisations')
-
+const statistiques = require('./routes/statistiques');
+const path = require("path");
 
 const port = process.env.PORT_SERVER 
 
@@ -36,7 +35,7 @@ app.use(bodyparser.urlencoded({extended: true}));
 app.use(bodyparser.json())
 app.use(express.json())
 app.use(cors({origin : 'http://localhost:3000', credentials : true}))
-app.use(express.static("public/annonces pics"))
+app.use(fileupload())
 
 app.use("/users", users)
 app.use("/annonces", annonces)
@@ -44,6 +43,7 @@ app.use("/logements", logements)
 app.use("/depenses", depenses)
 app.use("/reclamations", reclamations)
 app.use("/cotisations", cotisations)
+app.use("/statistiques", statistiques)
 
 // Database API mySql 
 pool = mysql.createPool({
@@ -54,13 +54,105 @@ pool = mysql.createPool({
     database : "db_syndicat"
 })
 
-app.post('/upload/annonce', upload.single('anonce'), (req, res) => {
-    const file = req.file
-    if(!file){
+
+
+////////////// ENREGISTRER ANNONCE AVEC SES DOCS ///////
+app.post('/upload/reclamation/:log/:objet/:message/:pour', async (req, res) => {
+    if(req.files === null){
+        console.log('is NULL')
+        res.send("No Image !")
+    }
+    else{
+        const {log, objet, message, pour} = req.params
+        if(log !== "" && objet !== "" && message !== "" && pour !== ""){
+            const file = req.files.reclam 
+            const NAMEFILE = Date.now() + "-" + file.name 
+            file.mv(`${__dirname}/../Client/public/reclamation support/${NAMEFILE}`, err => {
+                if(err){
+                    if(err.code === "ENOENT" || err.syscall === "open"){
+                        return res.send("Inserted")
+                    }
+                }
+            })
+            const sqlQuery = `call upload_reclamation('${log}' , '${objet}', '${message}', '${pour}', '${NAMEFILE}')`
+            await pool.query(sqlQuery, (err, resolve) => {
+                if(err){ 
+                    if(err.code === "ERR_HTTP_HEADERS_SENT"){
+                        return res.send("Headers Err")
+                    }
+                    else if(err.code === 'ERR_HTTP_INVALID_STATUS_CODE'){
+                        return res.send("http status code")
+                    }
+                    
+                }
+                if(resolve){
+                    if(resolve.affectedRows === "2"){
+                        return res.send("Inserted and Uploaded")
+                    }
+                    else{
+                        return res.send(resolve)
+                    }
+                }
+                else{
+                    console.log("hh")
+                }
+            }) 
+        }
+        else{
+            console.log('Null')
+        }
+    }
+})
+
+
+
+////////////// ENREGISTRER ANNONCE AVEC SES DOCS ///////
+app.post('/upload/annonce/:id/:sujet/:descripAnnonce', async (req, res) => {
+    if(req.files === null){
         return res.send("No Image !")
     }
-    res.send("Yayy")
+    else{
+        const {id, sujet, descripAnnonce} = req.params
+        if(id !== "" && sujet !== "" && descripAnnonce !== ""){
+            const idParsed = parseInt(id)
+            const file = req.files.anonce 
+            const NAMEFILE = Date.now() + "-" + file.name
+            file.mv(`${__dirname}/../Client/public/annonce doc/${NAMEFILE}`, err => {
+                if(err){
+                    if(err.code === "ENOENT" || err.syscall === "open"){
+                        return res.send("Inserted")
+                    }
+                }
+            })
+            const sqlQuery = `call upload_annonce(${idParsed} , '${sujet}', '${descripAnnonce}', '${NAMEFILE}')`
+            await pool.query(sqlQuery, (err, resolve) => {
+                if(err){ 
+                    if(err.code === "ER_BAD_NULL_ERROR"){
+                        res.json({messageErr : "Bad One"})
+                    }
+                    else{
+                        return res.send(err)
+                    }
+                }
+                if(resolve){
+                    if(resolve.affectedRows === "2"){
+                        res.send("Inserted and Uploaded")
+                    }
+                    else{
+                        res.send(resolve)
+                    }
+                }
+                else{
+                    console.log("hh")
+                }
+            })
+        }
+        else{
+            console.log("NULL")
+        }
+    }
 })
+
 
 
 ////// For Logging

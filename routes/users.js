@@ -43,19 +43,20 @@ router.route("/up/image")
 
 ////// Create New Account
 router.route("/new", authRole("Administrateur"))
-    .post((req, res, next) => {
-        const {nom, prenom, email, tele, role, fonc } = req.body
+    .post((req, res) => {
+        const { nom, prenom, email, tele, role, fonc } = req.body
         if(nom !== "" && prenom !== "" && email !== "" && tele !== "" && role !== "" && fonc !== ""){
             const pwd = nom + "@" + prenom 
             bcrypt.hash(pwd, saltRounds, (err, hash) => {
                 if(err){
-                    console.log(" errrrrrrrr : ")
+                    console.log(" errrrrrrrr : ", err)
                 }
                 const SQLQuery = "insert into compte (NomCompte, PrenomCompte, Role, fonc, EmailCompte, telephone, PasswordCompte) values (?, ?, ?, ?, ?, ?, ?)"
                 pool.query(SQLQuery, [nom, prenom, role, fonc, email, tele, hash], (err, resolve) => {
                     if(err){ 
-                        res.json({messageErr : err}) 
-                        console.log(err) 
+                        if(err.sqlMessage === `Duplicate entry '${email}' for key 'EmailCompte'`){
+                            return res.json({msgErr : "Duplicate Email"})
+                        }
                     }
                     if(resolve){
                         if(resolve.affectedRows != 0){
@@ -102,15 +103,15 @@ router.route("/:search")
             const sqlQuery = `select NumCompte, NomCompte, PrenomCompte, Role, EmailCompte, telephone, fonc, photo from compte where NomCompte like '%${search}%' or PrenomCompte like '%${search}%' or Role like '%${search}%' or fonc like '%${search}%' or EmailCompte like '%${search}%' or telephone like '%${search}%' order by NumCompte desc ;`
             pool.query(sqlQuery, (err, data) => {
                 if(err){
-                    res.json("Failed to load Data")
+                    return res.send("Failed to load Data")
                 }
                 if(data){
                     if(data.length !== 0){
-                        res.json( data )
+                        return res.send(data)
                         //console.log(data[0])
                     }
                     else{
-                        res.json({msggg : "No Users"})
+                        return res.json({msggg : "No Users"})
                     }
                 }
             })
@@ -159,11 +160,11 @@ router.route("/user/:id")
 router.route("/edit/:id")
     .put((req, res) => {
         const id = req.params.id
-        const {nom, prenom, fon, tele} = req.body 
+        const {nom, prenom, tele} = req.body 
 
-        if(id !== "" && nom !== "" && prenom !== "" && fon !== "" && tele !== "" ){
-            const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, fonc = ?, telephone = ? where NumCompte = ${id} ;`
-            pool.query(sqlQuery, [nom, prenom, fon, tele], (err, resolve) => {
+        if(id !== "" && nom !== "" && prenom !== ""  && tele !== "" ){
+            const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, telephone = ? where NumCompte = ${id} ;`
+            pool.query(sqlQuery, [nom, prenom, tele], (err, resolve) => {
                 if(err) {
                     res.json({err : "Not Updated"})
                 }
@@ -212,7 +213,7 @@ router.route('/reset/password/:id')
 
 // Delete User 
 router.route("/delete/:id")
-    .delete((req, res, next) => {
+    .delete((req, res) => {
         const id = req.params.id
         const sqlQuery = "delete from compte where NumCompte = ? ;"
         pool.query(sqlQuery, id, (err, resolve) => {
@@ -229,7 +230,6 @@ router.route("/delete/:id")
                 else{
                     return res.json("Deleted")
                 }
-                next()
             }
         })
     })
