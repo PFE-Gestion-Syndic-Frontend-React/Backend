@@ -8,6 +8,8 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken");
 const fs = require('fs')
 const fileupload = require('express-fileupload')
+
+
 /*const storage = multer.diskStorage({
     destination : (req, file, cb) => {
         cb(null, path.join(__dirname, "public/annonces pics"))
@@ -252,11 +254,27 @@ app.get("/getData/", (req, res) => {
 
 ////// To RESET The PASSWORD 
 app.post('/resetpwd', (req, res) => {
-    const email = req.body.email 
-    const tele = req.body.tele
-    const SQLQuery = "select * from compte where EmailCompte = ? and telephone = ? "
-    pool.query(SQLQuery, [email, tele], (err, result) => {
-
+    const { email, tele } = req.body
+    const SQLQuery = "select EmailCompte, telephone, NumCompte from compte where EmailCompte = ? and telephone = ? "
+    pool.query(SQLQuery, [email, tele], async (err, result) => {
+        if(err){
+            res.send(err)
+            console.log(err)
+        }
+        if(result){
+            console.log(result[0])
+            if(result.length > 0){
+                console.log("Yayy")
+                //res.send(result[0])
+            }
+            else{
+                console.log('Nay')
+                res.send("Unfounded User")
+            }
+        }
+        let randomNumber = await Math.round(Math.random() * 999999)
+        res.send(randomNumber)
+        console.log(randomNumber)
     })
 })
 

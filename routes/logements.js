@@ -82,11 +82,15 @@ router.route("/all")
         const sqlQuery = "select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, l.RefLogement from compte c, logement l where c.NumCompte = l.NumCompteCop and c.Role = 'Copropriétaire' order by l.RefLogement desc ;"
         pool.query(sqlQuery, (err, resolve) => {
             if(err){
-                res.json({err : err})
+                res.send(err)
             }
             if(resolve){
-                //console.log(resolve)
-                res.json(resolve)
+                if(resolve.length !== 0){
+                    res.send(resolve)
+                }
+                else{
+                    res.send("No Logement")
+                }
             }
         })
     })
@@ -115,15 +119,14 @@ router.route("/:search")
             const sqlQuery = `select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, l.RefLogement from compte c, logement l where c.NumCompte = l.NumCompteCop and c.Role = 'Copropriétaire' and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or c.EmailCompte like '%${search}%' or c.telephone like '%${search}%' or l.RefLogement like '%${search}%') order by c.NumCompte desc ;`
             pool.query(sqlQuery, (err, data) => {
                 if(err){
-                    res.json(err)
+                    res.send(err)
                 }
                 if(data){
                     if(data.length !== 0){
-                        res.json( data )
-                        //console.log(data[0])
+                        res.send( data )
                     }
                     else{
-                        res.json({msggg : "No Logements"})
+                        res.send("No Logement")
                     }
                 }
             })
@@ -138,14 +141,14 @@ router.route("/coproprietaire/:refLogement")
             const sqlQuery = `select c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, c.photo, l.RefLogement from compte c, logement l where c.NumCompte = l.NumCompteCop and c.Role = 'Copropriétaire' and l.RefLogement = ? order by c.NumCompte desc ;`
             pool.query(sqlQuery, refLogement, (err, data) => {
                 if(err){
-                    res.json(err)
+                    res.send(err)
                 }
                 if(data){
                     if(data.length !== 0){
-                        res.json( data )
+                        res.send(data)
                     }
                     else{
-                        res.json({msggg : "No Logements"})
+                        res.send("No Logement")
                     }
                 }
             })

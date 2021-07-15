@@ -160,26 +160,31 @@ router.route("/user/:id")
 router.route("/edit/:id")
     .put((req, res) => {
         const id = req.params.id
-        const {nom, prenom, tele} = req.body 
+        const {nom, prenom, tele, pwd, newPwd} = req.body 
 
         if(id !== "" && nom !== "" && prenom !== ""  && tele !== "" ){
-            const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, telephone = ? where NumCompte = ${id} ;`
-            pool.query(sqlQuery, [nom, prenom, tele], (err, resolve) => {
-                if(err) {
-                    res.json({err : "Not Updated"})
-                }
-                if(resolve){
-                    if(resolve.affectedRows != 0){
-                        res.json({message : "Updated Successfully"})
+            if(pwd !== "" && newPwd !== ""){
+                console.log(pwd, "      -        ", newPwd)
+            }
+            else{
+                const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, telephone = ? where NumCompte = ${id} ;`
+                pool.query(sqlQuery, [nom, prenom, tele], (err, resolve) => {
+                    if(err) {
+                        res.json({err : "Not Updated"})
+                    }
+                    if(resolve){
+                        if(resolve.affectedRows != 0){
+                            res.json({message : "Updated Successfully"})
+                        }
+                        else{
+                            res.json({messageErr : "Update Failed"})
+                        }
                     }
                     else{
-                        res.json({messageErr : "Update Failed"})
+                        res.json({messageErr : "err"})
                     }
-                }
-                else{
-                    res.json({messageErr : "err"})
-                }
-            })
+                })
+            }
         }
     })
 

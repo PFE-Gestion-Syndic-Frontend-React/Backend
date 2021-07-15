@@ -94,6 +94,47 @@ router.route('/new/cheque')
         }
     })
 
+
+/////// EDIT PAIEMENT 
+router.route('/edit/:RefPaiement')
+    .put(async (req, res) => {
+        const RefPaiement = req.params.RefPaiement
+        const {mois, montant, methode, cheque, bnq} = req.body
+        if(methode === "Espèce"){
+            const sqlQuery = `call up_espece_paied('${RefPaiement}', ${mois}, ${montant}, '${methode}') ; `
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    console.log(err)
+                    res.send(err)
+                }
+                if(data){
+                    console.log(data)
+                    res.send(data)
+                }
+            })
+        }
+        else{
+            if(cheque !== undefined && bnq !== undefined){
+                const sqlQuery = `call up_cheque_paied('${RefPaiement}', ${mois}, ${montant}, '${methode}', '${cheque}', '${bnq}') ; `
+                pool.query(sqlQuery, (err, data) => {
+                    if(err){
+                        if(err.sqlMessage === 'Cannot add or update a child row: a foreign key constraint fails (`db_syndicat`.`cheque`, CONSTRAINT `fk_che_pai` FOREIGN KEY (`RefPaiement`) REFERENCES `paiement` (`RefPaiement`) ON DELETE CASCADE ON UPDATE CASCADE)'){
+                            return res.send("Introuvable")
+                        }
+                    }
+                    if(data){
+                        console.log(data)
+                        res.send(data)
+                    }
+                })
+            }
+        }
+    })
+
+
+
+
+
 /////// lister all Cotisations :
 router.route('/all')
     .get((req, res) => {
@@ -142,13 +183,14 @@ router.route('/mesCotisations/:id')
                             return res.send("It's Not YOU Damn")
                         }
                     }
-                    if(data.length > 0){
-                        res.json(data[0])
+                    if(data){
+                        if(data[0].length !== 0){
+                            return res.send(data[0])
+                        }
+                        else{
+                            return res.send("No Cotisation")
+                        }
                     }
-                    else{
-                        res.send("No Paiements")
-                    }
-                    
                 })
 
             }
@@ -172,23 +214,21 @@ router.route('/mesCotisations/:id/:search')
                     const sqlQuery = `SELECT p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque from compte co, cheque c right JOIN paiement p on c.RefPaiement = p.RefPaiement INNER JOIN calendrier cal on cal.RefPaiement = p.RefPaiement WHERE co.NumCompte = ${id} and co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement ) and (p.RefPaiement LIKE '%${search}%' or co.NomCompte LIKE '%${search}%' OR co.PrenomCompte LIKE '%${search}%' OR p.MethodePaiement LIKE '%${search}%' OR p.datePaiement LIKE '%${search}%') ORDER by p.RefPaiement DESC;` 
                     pool.query(sqlQuery, (err, data) => {
                         if(err){
-                            if(err === null){
-                                return res.send("Fine")
+                            if(err.sqlMessage === "Unknown column 'NaN' in 'field list'"){
+                                return res.send("TRY Later Oky")
                             }
-                            else{
-                                return res.send(err)
+                            else if(err.code === "ER_PARSE_ERROR"){
+                                return res.send("It's Not YOU Damn")
                             }
                         }
                         if(data){
-                            if(data.length > 0){
+                            if(data.length !== 0){
                                 return res.send(data)
                             }
+                            else{
+                                return res.send("No Cotisation")
+                            }
                         }
-                        console.log("data :  ", data)
-                        console.log("err  :  ", err)
-                        /*else{
-                            return res.send("No Paiements")
-                        }*/
                     })
                 }
             }
@@ -226,8 +266,11 @@ router.route('/getImpayes')
             if(err){
                 return res.send(err)
             }
-            if(resolve){
+            if(resolve.length !== 0){
                 res.send(resolve[0])
+            }
+            else{
+                res.send("Not Found")
             }
         })
     })
@@ -255,6 +298,31 @@ router.route('/getImpayes/:searchBy')
     })
 
 
+///////// DELETE Cotisation 
+router.route('/delete/:RefPaiement')
+    .delete((req, res) => {
+        const RefPaiement = req.params.RefPaiement
+        if(RefPaiement !== "" && RefPaiement !== undefined){
+            const sqlQuery = `delete from paiement where RefPaiement = '${RefPaiement}' ;`
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    res.send(err)
+                    console.log(err)
+                }
+                if(data){
+                    if(data.affectedRows === 0){
+                        res.send("No Cotisation")
+                    }
+                    else if(data.affectedRows !== 0){
+                        res.send("Deleted")
+                    }
+                }
+            })
+        }
+    })
+
+
+
 /////// Search by :
 router.route('/:search')
     .get((req, res) => {
@@ -270,8 +338,7 @@ router.route('/:search')
                         }
                         if(data){
                             if(data.length !== 0){
-                                return res.send( data )
-                                //console.log(data[0])
+                                return res.send(data)
                             }
                             else{
                                 return res.send("No Paiements")

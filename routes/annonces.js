@@ -46,8 +46,10 @@ router.route('/all')
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
                     if(data.length !== 0){
-                        //console.log(data)
                         res.json(data)
+                    }
+                    else{
+                        res.json({msgErr : "No Announcement"})
                     }
                 }
                 else{
@@ -58,7 +60,6 @@ router.route('/all')
         }
         else{
             console.log("No token !!")
-
             res.json({msgErr : "No Token Set"})
         }
     })
@@ -67,32 +68,31 @@ router.route('/all')
 
 //// Searching Annonces By ... 
 router.route("/:search")
-.get((req, res) => {
-    const search = req.params.search
-    const token = req.headers['authorization']
-    if(token.length > 150){
-        if(search !== ""){
-            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`
-            pool.query(sqlQuery, (err, data) => {
-                if(err){
-                    res.json("Failed to load Data")
-                }
-                if(data){
-                    if(data.length !== 0){
-                        res.json( data )
-                        //console.log(data[0])
+    .get((req, res) => {
+        const search = req.params.search
+        const token = req.headers['authorization']
+        if(token.length > 150){
+            if(search !== ""){
+                const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`
+                pool.query(sqlQuery, (err, data) => {
+                    if(err){
+                        res.json("Failed to load Data")
                     }
-                    else{
-                        res.json({msggg : "No Annonce"})
+                    if(data){
+                        if(data.length !== 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.json({msggg : "No Annonce"})
+                        }
                     }
-                }
-            })
+                })
+            }
         }
-    }
-    else{
-        res.json({msgErr : "No Token Set"})
-    }
-})
+        else{
+            res.json({msgErr : "No Token Set"})
+        }
+    })
 
 ////// lister les annonces qui ont statut 1 
 router.route('/all/statut/true')
@@ -102,14 +102,15 @@ router.route('/all/statut/true')
             const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 order by a.RefAnnonce desc"   
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
-                    if(data.length !== 0){
-                        res.json(data)
+                    if(data.length > 0){
+                        res.send(data)
+                    }
+                    else{
+                        res.send("No Annonce")
                     }
                 }
                 else{
-                    console.log("No Announcement for U")
-                    res.json({msgErr : "No Announcement"})
-                    
+                    res.send("No Annonce")
                 }
             })
         }
@@ -125,19 +126,22 @@ router.route('/all/statut/true/:search')
         const token = req.headers['authorization']
         if(token.length > 150){
             const search = req.params.search
-            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce, d.contenuDocument from compte c, document d right join annonce a on a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`   
-            pool.query(sqlQuery, (err, data) => {
-                if(!err){
-                    if(data.length > 0){
-                        res.json(data)
+            if(search !== "" && search !== undefined){
+                const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce, d.contenuDocument from compte c, document d right join annonce a on a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`   
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Annonce")
+                        }
                     }
-                }
-                else{
-                    console.log("No Announcement for U")
-                    res.json({msgErr : "No Announcement"})
-                    
-                }
-            })
+                    else{
+                        res.send("No Annonce")
+                    }
+                })
+            }
         }
         else{
             console.log("No token !!")
