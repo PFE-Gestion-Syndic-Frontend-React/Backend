@@ -49,7 +49,7 @@ router.route("/new", authRole("Administrateur"))
             const pwd = nom + "@" + prenom 
             bcrypt.hash(pwd, saltRounds, (err, hash) => {
                 if(err){
-                    console.log(" errrrrrrrr : ", err)
+                    return res.json(" errrrrrrrr : ")
                 }
                 const SQLQuery = "insert into compte (NomCompte, PrenomCompte, Role, fonc, EmailCompte, telephone, PasswordCompte) values (?, ?, ?, ?, ?, ?, ?)"
                 pool.query(SQLQuery, [nom, prenom, role, fonc, email, tele, hash], (err, resolve) => {

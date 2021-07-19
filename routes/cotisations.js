@@ -68,7 +68,7 @@ router.route('/new/cheque')
                 }
                 if(resolve){
                     if(resolve.affectedRows != 0){
-                        res.json({message : "Inserted"})
+                        //res.json({message : "Inserted"})
                     }
                     else{
                         res.json({messageErr : "bad"})

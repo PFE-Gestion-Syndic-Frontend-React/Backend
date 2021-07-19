@@ -1,22 +1,14 @@
 const express = require("express")
 let router = express.Router()
-const bcrypt = require("bcrypt")
-const saltRounds = 10 // used for Hashing length
-const fileUpload = require("express-fileupload")
 require("dotenv").config()
 const bodyparser = require("body-parser");
 const mysql = require("mysql");
-const cors = require("cors")
-const jwt = require("jsonwebtoken");
-const {authToken, authRole} = require('./../middleware')
-const multer = require('multer')
-
+const cors = require("cors");
 
 
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(fileUpload())
 router.use(cors({origin : 'http://localhost:3000', credentials : true}))
 
 router.route("/data")
@@ -26,5 +18,18 @@ router.route("/data")
         })
     })
 
+router.route("/du")
+    .get((req, res) => {
+        const {moisDep, anneeDep} = req.body
+        if(moisDep !== "" && moisDep !== undefined && anneeDep !== "" && anneeDep !== undefined){
+            console.log(moisDep, " ", typeof(moisDep))
+            pool.query("call stats_du(?, ?)", [moisDep, anneeDep], (err, data) => {
+                if(err) return res.send(err)
+                if(data){
+                    res.send(data)
+                }
+            })
+        }
+    })
 
 module.exports = router

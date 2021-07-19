@@ -1,13 +1,9 @@
 const express = require("express")
 let router = express.Router()
-const bcrypt = require("bcrypt")
-const saltRounds = 10 // used for Hashing length
 const fileUpload = require("express-fileupload")
 require("dotenv").config()
 const bodyparser = require("body-parser");
-const mysql = require("mysql");
 const cors = require("cors")
-const jwt = require("jsonwebtoken");
 
 
 router.use(bodyparser.urlencoded({extended: true}));

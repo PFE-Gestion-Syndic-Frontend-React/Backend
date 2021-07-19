@@ -5,6 +5,7 @@ const mysql = require("mysql");
 const cors = require("cors")
 const app = express();
 const bcrypt = require("bcrypt")
+const saltRounds = 10 // used for Hashing length
 const jwt = require("jsonwebtoken");
 const fs = require('fs')
 const fileupload = require('express-fileupload')
@@ -29,6 +30,7 @@ const depenses = require('./routes/depenses')
 const reclamations = require('./routes/reclamations')
 const cotisations = require('./routes/cotisations')
 const statistiques = require('./routes/statistiques');
+const releves = require('./routes/releves')
 const path = require("path");
 
 const port = process.env.PORT_SERVER 
@@ -46,6 +48,7 @@ app.use("/depenses", depenses)
 app.use("/reclamations", reclamations)
 app.use("/cotisations", cotisations)
 app.use("/statistiques", statistiques)
+app.use("/releves", releves)
 
 // Database API mySql 
 pool = mysql.createPool({
@@ -137,7 +140,7 @@ app.post('/upload/annonce/:id/:sujet/:descripAnnonce', async (req, res) => {
                     }
                 }
                 if(resolve){
-                    if(resolve.affectedRows === "2"){
+                    if(resolve.affectedRows === 2){
                         res.send("Inserted and Uploaded")
                     }
                     else{
@@ -202,6 +205,7 @@ app.post('/', (req, res) => {
 });
 
 
+////// Verify Token MIDDLEWARE
 const verifyJWT = (req, res, next) => {
     const token = req.headers['authorization']
     const Totoken = token.replace("Bearer ", "")
@@ -224,7 +228,7 @@ const verifyJWT = (req, res, next) => {
     }
 }
 
-
+////// Verification Auth
 app.get("/isAuth", verifyJWT, (req, res) => {
     if(res){
 
@@ -279,6 +283,184 @@ app.post('/resetpwd', (req, res) => {
 })
 
 
+/////// Edit Pic Photo
+app.put('/upload/profile/:id', async (req, res) => {
+    const id = req.params.id
+    if(req.files === null || req.files === undefined){
+        return res.send("No Image !")
+    }
+    else{
+        const idParsed = parseInt(id)
+        const file = req.files.profile 
+        console.log(file)
+        const NAMEFILE = Date.now() + "-" + file.name
+        file.mv(`${__dirname}/../Client/public/profile img/${NAMEFILE}`, err => {
+            if(err){
+                if(err.code === "ENOENT" || err.syscall === "open"){
+                    return res.send("Inserted")
+                }
+            }
+        })
+        const sqlUpload = `update Compte set photo = '${NAMEFILE}' where NumCompte = ${idParsed} ;`
+        await pool.query(sqlUpload, (er, data) => {
+            if(er) return res.send(er)
+            if(data){
+                if(data){
+                    if(data.affectedRows !== 0){
+                        console.log("Inserted and Uploaded")
+                    }
+                    else{
+                        console.log(resolve)
+                    }
+                }
+                else{
+                    console.log("hh")
+                }
+            }
+        })
+    }
+})
+
+
+
+////// Edit My Account
+app.put('/monCompte/edit/:id', (req, res) => {
+    const id = req.params.id 
+    const { nom, prenom, tele, pwd, newPwd } = req.body
+    if(id !== ""){
+        const idParsed = parseInt(id)
+        if(nom !== "" && nom !== undefined && prenom !== "" && prenom !== undefined && tele !== "" && tele !== undefined && pwd !== "" && newPwd !== "" && pwd !== undefined && newPwd !== undefined){
+            const sqlQuery = `update compte set NomCompte = '${nom}', PrenomCompte = '${prenom}', telephone = '${tele}' where NumCompte = ${idParsed} ;`
+            pool.query(sqlQuery, async (err, result) => {
+                if(err){
+                    return res.send(err)
+                }
+                if(result){
+                    if(result.affectedRows !== 0){
+                        const sqlSelect = `select PasswordCompte from Compte where NumCompte = ${idParsed} ;`
+                        await pool.query(sqlSelect, (err, result) => {
+                            if(result){
+                                if(result.length > 0){
+                                    bcrypt.compare(pwd, result[0].PasswordCompte, async (error, response) => {
+                                        if(error) return res.json("1 Mot de Passe Incorrect")
+                                        if(response){
+                                            if(result.length > 0){
+                                                await bcrypt.hash(newPwd, saltRounds, async (er, hash) => {
+                                                    if(err){
+                                                        return res.json(er)
+                                                    }
+                                                    const sqlUpdatePWD = `update compte set PasswordCompte = '${hash}' where NumCompte = ${idParsed} ;`
+                                                    await pool.query(sqlUpdatePWD, (errr, data) => {
+                                                        if(errr){
+                                                            return res.json(errr)
+                                                        }
+                                                        if(data){
+                                                            if(data.affectedRows !== 0){
+                                                                return res.json("Yaaay")
+                                                            }
+                                                            else{
+                                                                return res.json("Naay")
+                                                            }
+                                                        }
+                                                    })
+                                                })
+                                            }
+                                        }
+                                        else{
+                                            return res.json("INCORRECT")
+                                        }
+                                    })
+                                }
+                                else{
+                                    return res.json("3 Mot de Passe Incorrect")
+                                }
+                            }
+                        })
+                    }
+                    else{
+                        return res.json("Not Updated")
+                    }
+                }
+            })
+        }
+        else if(nom !== "" && nom !== undefined && prenom !== "" && prenom !== undefined && tele !== "" && tele !== undefined){
+            const sqlQuery = `update compte set NomCompte = '${nom}', PrenomCompte = '${prenom}', telephone = '${tele}' where NumCompte = ${idParsed} ;`
+            pool.query(sqlQuery, (err, result) => {
+                if(err){
+                    return res.send(err)
+                }
+                if(result){
+                    if(result.affectedRows !== 0){
+                        return res.json("Updated")
+                    }
+                    else{
+                        return res.json("Not Updated")
+                    }
+                }
+            })
+        }
+        else if(pwd !== "" && newPwd !== "" && pwd !== undefined && newPwd !== undefined){
+            const sqlSelect = `select PasswordCompte from Compte where NumCompte = ${idParsed} ;`
+            pool.query(sqlSelect, (err, result) => {
+                if(result){
+                    if(result.length > 0){
+                        bcrypt.compare(pwd, result[0].PasswordCompte, async (error, response) => {
+                            if(error) return res.json("1 Mot de Passe Incorrect")
+                            if(response){
+                                if(result.length > 0){
+                                    await bcrypt.hash(newPwd, saltRounds, async (er, hash) => {
+                                        if(err){
+                                            return res.json(er)
+                                        }
+                                        const sqlUpdatePWD = `update compte set PasswordCompte = '${hash}' where NumCompte = ${idParsed} ;`
+                                        await pool.query(sqlUpdatePWD, (errr, data) => {
+                                            if(errr){
+                                                return res.json(errr)
+                                            }
+                                            if(data){
+                                                if(data.affectedRows !== 0){
+                                                    return res.json("Yaaay")
+                                                }
+                                                else{
+                                                    return res.json("Naay")
+                                                }
+                                            }
+                                        })
+                                    })
+                                }
+                            }
+                            else{
+                                return res.json("INCORRECT")
+                            }
+                        })
+                    }
+                    else{
+                        return res.json("3 Mot de Passe Incorrect")
+                    }
+                }
+            })
+        }
+    }
+})
+
+////// Get My Data 
+app.get('/me/:id', (req, res) => {
+    const id = req.params.id
+    const sqlQuery = `select NomCompte, PrenomCompte, photo from compte where NumCompte = ${id};`
+    pool.query(sqlQuery, (err, data) => {
+        if(err){
+            res.json({msgErr : "Err"})
+        }
+        if(data.length > 0){
+            res.json(data)
+        }
+        else{
+            res.json({msgErr : "Not Found"})
+        }
+    })
+})
+
+
+
 
 app.listen(port, ()=> console.log(`App running on ${port}` ));
-
