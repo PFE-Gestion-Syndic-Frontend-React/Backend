@@ -1,16 +1,11 @@
 const express = require("express")
 let router = express.Router()
-const bcrypt = require("bcrypt")
-const saltRounds = 10 // used for Hashing length
 const fileUpload = require("express-fileupload")
 require("dotenv").config()
 const bodyparser = require("body-parser");
-const mysql = require("mysql");
 const cors = require("cors")
-const jwt = require("jsonwebtoken");
-const { requireAdmin, requireAuth } = require("../app")
-
-const multer = require('multer')
+const pdf = require('html-pdf')
+const pdfTemplate = require("./documents situation coproprietaire")
 
 
 
@@ -233,8 +228,44 @@ router.route('/copro/NumCompte/:id')
     })
 
 
+/////// Create PDF File
+router.route('/create-pdf')
+    .post((req, res) => {
+        const { compte } = req.body
+        if(compte !== "" && compte !== undefined){
+            const sqlQuery = `call data_mes_cotisations('${compte.NumCompte}')`
+            pool.query(sqlQuery, (err, result) => {
+                if(err){
+                    return res.send(err)
+                }
+                if(result){
+                    let nom = compte.NomCompte
+                    let prenom = compte.PrenomCompte
+                    let tele = compte.telephone
+                    let email = compte.EmailCompte
+                    let log = compte.RefLogement
+                    let coti = result[0]
+                    pdf.create(pdfTemplate(nom, prenom, tele, email, log, coti ), {}).toFile(`${__dirname}/documents situation coproprietaire/result1.pdf`, (err) => {    
+                        if(err){
+                            res.send(Promise.reject())
+                            console.log(err)
+                        }
+                        res.send(Promise.resolve())
+                    })
+                }
+            })
+        }
+    })
 
-
-
+/////// Return the PDF 
+router.route('/fetch-pdf')
+    .get((req, res) => {
+        try{
+            res.sendFile(`${__dirname}/documents situation coproprietaire/result1.pdf`)
+        }
+        catch(err){
+            console.log("No Way .... ", err)
+        }
+    })
 
 module.exports = router

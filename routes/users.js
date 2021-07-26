@@ -28,7 +28,7 @@ router.route("/up/image")
             console.log("No Photos Okey then")
         }
 
-        console.log(req.files)
+        //console.log(req.files)
         /*const file = req.files.file 
         console.log(file)
         file.mv(`${__dirname}/../../Client/public/profile img/${file.name}`, (err) => {
@@ -160,31 +160,26 @@ router.route("/user/:id")
 router.route("/edit/:id")
     .put((req, res) => {
         const id = req.params.id
-        const {nom, prenom, tele, pwd, newPwd} = req.body 
-
+        const { nom, prenom, tele } = req.body 
         if(id !== "" && nom !== "" && prenom !== ""  && tele !== "" ){
-            if(pwd !== "" && newPwd !== ""){
-                console.log(pwd, "      -        ", newPwd)
-            }
-            else{
-                const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, telephone = ? where NumCompte = ${id} ;`
-                pool.query(sqlQuery, [nom, prenom, tele], (err, resolve) => {
-                    if(err) {
-                        res.json({err : "Not Updated"})
-                    }
-                    if(resolve){
-                        if(resolve.affectedRows != 0){
-                            res.json({message : "Updated Successfully"})
-                        }
-                        else{
-                            res.json({messageErr : "Update Failed"})
-                        }
+            const sqlQuery = `update compte set NomCompte = ?, PrenomCompte = ?, telephone = ? where NumCompte = ${id} ;`
+            pool.query(sqlQuery, [nom, prenom, tele], (err, resolve) => {
+                if(err) {
+                    res.json({err : "Not Updated"})
+                }
+                if(resolve){
+                    if(resolve.affectedRows != 0){
+                        res.json({message : "Updated Successfully"})
                     }
                     else{
-                        res.json({messageErr : "err"})
+                        res.json({messageErr : "Update Failed"})
                     }
-                })
-            }
+                }
+                else{
+                    res.json({messageErr : "err"})
+                }
+            })
+            
         }
     })
 
@@ -282,11 +277,6 @@ router.route('/logement/cop')
             }
         })
     })
-
-
-
-
-
 
 
 module.exports = router

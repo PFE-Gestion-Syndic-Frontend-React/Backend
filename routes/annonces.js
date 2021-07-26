@@ -16,23 +16,30 @@ router.use(cors({origin : 'http://localhost:3000', credentials : true}))
 ///// ENREGISTRER UNE ANNONCE
 router.route("/new/:id")
     .post((req, res) => {
-        const { sujet, descripAnnonce} = req.body
-        const id = req.params.id
-        if(id !== "" && sujet !== "" && descripAnnonce !== ""){
-            const sqlQuery = `insert into annonce (NumCompte, Sujet, DescripAnnonce) values (${id} , ?, ?)`
-            pool.query(sqlQuery, [sujet, descripAnnonce], (err, resolve) => {
-                if(err){ 
-                    return res.send("Failed") 
-                }
-                if(resolve){
-                    if(resolve.affectedRows != 0){
-                        res.send("Inserted")
+        const token = req.headers['authorization']
+        if(token.length > 150){
+            const { sujet, descripAnnonce} = req.body
+            const id = req.params.id
+            if(id !== "" && sujet !== "" && descripAnnonce !== ""){
+                const sqlQuery = `insert into annonce (NumCompte, Sujet, DescripAnnonce) values (${id} , ?, ?)`
+                pool.query(sqlQuery, [sujet, descripAnnonce], (err, resolve) => {
+                    if(err){ 
+                        return res.send("Failed") 
                     }
-                    else{
-                        res.send("bad")
+                    if(resolve){
+                        if(resolve.affectedRows != 0){
+                            res.send("Inserted")
+                        }
+                        else{
+                            res.send("bad")
+                        }
                     }
-                }
-            })
+                })
+            }
+        }
+        else{
+            console.log("No token !!")
+            res.json({msgErr : "No Token Set"})
         }
     })
 

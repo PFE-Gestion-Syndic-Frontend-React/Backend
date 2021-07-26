@@ -80,12 +80,11 @@ router.route("/new")
                 sqlQuery = "insert into depense (NumCompte, NomCategorie, dateDepense, MontantDepense, facture, descriptionDepense) values (?, ?, ?, ?, ?, ?) ;"
                 pool.query(sqlQuery, [id, typeDepense, date, montant, fact, detail], (err, resolve) => {
                     if(err){
-                        if(err.sqlMessage === "Column 'NomCategorie' cannot be null" || err.code === 'ER_BAD_NULL_ERROR'){
+                        if(err.sqlMessage === "Column 'NomCategorie' cannot be null"){
                             res.json({err : "NomCategorie is Null"})
                         }
-                        else{
-                            console.log(err)
-                            res.json({err : err})
+                        else if(err.code === 'ER_BAD_NULL_ERROR'){
+                            res.json({err : "NomCategorie is Null"})
                         }
                     }
                     if(resolve){

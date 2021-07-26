@@ -144,8 +144,7 @@ router.route('/all')
                 const sqlQuery = "call data_Cotisation()"   
                 pool.query(sqlQuery, (err, data) => {
                     if(!err){
-                        if(data.length !== 0){
-                            //console.log(data)
+                        if(data.length !== 0){  
                             res.json(data)
                         }
                     }
@@ -156,13 +155,11 @@ router.route('/all')
                 })
             }
             else{
-                console.log("Invalid Token")
-                res.json({msgErr : "Invalid Token"})
+                res.json({msgErr : "No Token"})
             }
         }
         else{
-            console.log("No Token at all")
-            res.json({msgErr : "No Token at all"})
+            res.json({msgErr : "No Token"})
         }
     })
 

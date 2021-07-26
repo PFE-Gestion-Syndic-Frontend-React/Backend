@@ -297,7 +297,7 @@ router.route("/:search")
     .get((req, res) => {
         const search = req.params.search
         if(search !== ""){
-            const sqlQuery = `select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour from compte c, logement l, reclamation r where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or r.Objet like '%${search}%' or r.Message like '%${search}%' or r.pour like '%${search}%' or r.statut like '%${search}%' ) order by r.RefReclamation desc ;`
+            const sqlQuery = `select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on r.RefReclamation = s.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or r.Objet like '%${search}%' or r.Message like '%${search}%' or r.pour like '%${search}%' or r.statut like '%${search}%' ) order by r.RefReclamation desc ;`
             pool.query(sqlQuery, (err, data) => {
                 if(err){
                     res.send(err)

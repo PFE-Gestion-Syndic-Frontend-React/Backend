@@ -34,12 +34,14 @@ const releves = require('./routes/releves')
 const path = require("path");
 
 const port = process.env.PORT_SERVER 
+const client = process.env.PORT_CLIENT
 
 app.use(bodyparser.urlencoded({extended: true}));
 app.use(bodyparser.json())
 app.use(express.json())
-app.use(cors({origin : 'http://localhost:3000', credentials : true}))
+app.use(cors({origin : `http://localhost:${client}`, credentials : true}))
 app.use(fileupload())
+app.use(express.static('public'))
 
 app.use("/users", users)
 app.use("/annonces", annonces)
@@ -161,7 +163,7 @@ app.post('/upload/annonce/:id/:sujet/:descripAnnonce', async (req, res) => {
 
 
 ////// For Logging
-app.post('/', (req, res) => {
+app.post('/login', (req, res) => {
     const {email, pwd} = req.body
     if(email !== "" && pwd !== ""){
         const SQLQuery = "select NumCompte, NomCompte, PrenomCompte, photo, EmailCompte, Role, PasswordCompte from compte where EmailCompte = ? ;"
@@ -183,9 +185,6 @@ app.post('/', (req, res) => {
 
                                 req.headers['authorization'] = accessToken
                                 return res.json({auth : true, data : result, token : accessToken})
-                            }
-                            else{
-                                //return res.json({messageExp : "User"})
                             }
                         }
                         else{
@@ -292,7 +291,7 @@ app.put('/upload/profile/:id', async (req, res) => {
     else{
         const idParsed = parseInt(id)
         const file = req.files.profile 
-        console.log(file)
+        //console.log(file)
         const NAMEFILE = Date.now() + "-" + file.name
         file.mv(`${__dirname}/../Client/public/profile img/${NAMEFILE}`, err => {
             if(err){
