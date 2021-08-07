@@ -8,7 +8,7 @@ const cors = require("cors")
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
 
@@ -219,11 +219,11 @@ router.route("/delete/:refAnnonce")
             }
             if(resolve){
                 if(resolve.message){
-                    return res.json("Deleted ALL")
+                    return res.send("Deleted ALL")
                 }
             }
             else{
-                return res.json("No Resolving")
+                return res.send("No Resolving")
             }
         })
     })

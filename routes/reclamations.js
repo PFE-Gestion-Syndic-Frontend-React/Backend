@@ -1,6 +1,5 @@
 const express = require("express")
 let router = express.Router()
-const fileUpload = require("express-fileupload")
 require("dotenv").config()
 const bodyparser = require("body-parser");
 const cors = require("cors")
@@ -9,14 +8,12 @@ const cors = require("cors")
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(fileUpload())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
 router.route('/new')
     .post((req, res) => {
         const {log, objet, message, pour} = req.body
-        //console.log("id : ", typeof(id), "  Objet : ", objet, "  mes : ", message, " Pour : ", pour)
         if(log !== "" && objet !== "" && message !== ""){
             const sqlQuery = "call insert_Rec(?, ?, ?, ?)"
             pool.query(sqlQuery, [log, objet, message, pour], (err, data) => {
@@ -35,7 +32,6 @@ router.route('/new')
                     else{
                         res.send(data)
                     }
-                    console.log(data)
                 }
             })
         }
@@ -45,26 +41,17 @@ router.route('/new')
 router.route('/all')
     .get((req, res) => {
         const token = req.headers['authorization']
-        //if(token.length > 150){
-            const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement order by r.RefReclamation desc"   
-            pool.query(sqlQuery, (err, data) => {
-                if(!err){
-                    if(data.length > 0){
-                        //console.log(data)
-                        res.json(data)
-                    }
+        const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement order by r.RefReclamation desc"   
+        pool.query(sqlQuery, (err, data) => {
+            if(!err){
+                if(data.length > 0){
+                    res.json(data)
                 }
-                else{
-                    console.log("No Réclamation for U")
-                    res.json({msgErr : "No Réclamations"})
-                    
-                }
-            })
-        /*}
-        else{
-            console.log("No token !!")
-            res.json({msgErr : "No Token Set"})
-        }*/
+            }
+            else{
+                res.json({msgErr : "No Réclamations"})
+            }
+        })
     })
 
 ////////////// Réclamations pour les COPROPRIETAIRES ////////
@@ -243,30 +230,23 @@ router.route("/maReclamation/edit/:refReclamation")
 /////// RECLAMATION BY REFLOGEMENT 
 router.route('/logement/:refLogement')
     .get((req, res) => {
-        const token = req.headers['authorization']
-        //if(token.length > 150){
-            const refLogement = req.params.refLogement
-            if(refLogement !== "" && refLogement !== undefined){
-                const sqlQuery = `select r.RefReclamation, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where l.RefLogement = r.RefLogement and l.RefLogement = '${refLogement}' order by r.RefReclamation desc ;`   
-                pool.query(sqlQuery, (err, data) => {
-                    if(err){
-                        res.send(err)
+        const refLogement = req.params.refLogement
+        if(refLogement !== "" && refLogement !== undefined){
+            const sqlQuery = `select r.RefReclamation, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where l.RefLogement = r.RefLogement and l.RefLogement = '${refLogement}' order by r.RefReclamation desc ;`   
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    res.send(err)
+                }
+                else{
+                    if(data.length > 0){
+                        res.send(data)
                     }
                     else{
-                        if(data.length > 0){
-                            res.send(data)
-                        }
-                        else{
-                            res.send("No Réclamation")
-                        }
+                        res.send("No Réclamation")
                     }
-                })
-            }
-        /*}
-        else{
-            console.log("No token !!")
-            res.json({msgErr : "No Token Set"})
-        }*/
+                }
+            })
+        }
     })
 
 /////// Delete Réclamation ///// 

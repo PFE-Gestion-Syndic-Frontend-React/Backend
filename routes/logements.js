@@ -1,19 +1,17 @@
 const express = require("express")
 let router = express.Router()
-const fileUpload = require("express-fileupload")
 require("dotenv").config()
 const bodyparser = require("body-parser");
 const cors = require("cors")
-const pdf = require('html-pdf')
-const pdfTemplate = require("./documents situation coproprietaire")
+//const pdf = require('html-pdf')
+//const pdfTemplate = require("./documents situation coproprietaire")
 
 
 
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(fileUpload())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
 //// Find Account by Email
@@ -26,9 +24,7 @@ router.route("/byEmail/:email")
                 res.send({msg : "err"})
             }
             if(data){
-                //console.log(data)
                 if(data){
-                    //console.log(data)
                     res.json(data)
                 }
                 else{
@@ -49,13 +45,11 @@ router.route("/new")
             pool.query(sqlQuery, [refLog, type, user], (err, resolve) => {
                 if(err){ 
                     if(err.sqlMessage === `Duplicate entry '${refLog}' for key 'PRIMARY'`){
-                        res.json({messageErr : "le Logement est Déjà Inseré !"}) 
-                        //console.log("le Logement est Déjà Inseré !") 
+                        res.json({messageErr : "le Logement est Déjà Inseré !"})
                     }
                 }
                 try{
                     if(resolve){
-                        //console.log(resolve)
                         if(resolve.affectedRows != 0){
                             res.json({message : "Inserted"})
                         }
@@ -99,7 +93,6 @@ router.route("/Coproprietaire/byEmail")
                 res.json({err : err})
             }
             if(resolve){
-                //console.log(resolve)
                 res.json(resolve)
             }
         })
@@ -179,33 +172,20 @@ router.route('/edit/:refLogement')
 ///// Details of cotisations of logement
 router.route('/info/:refLogement')
     .get((req, res) => {
-        const token = req.headers['authorization']
-        /*if(token !== undefined && token !== ""){
-            if(token.length > 150){*/
-                const refLogement = req.params.refLogement
-                const sqlQuery = `CALL data_Cotisation_Bylogement('${refLogement}') ;`  
-                pool.query(sqlQuery, (err, response) => {
-                    if(!err){
-                        if(response.length !== 0){
-                            console.log(response)
-                            res.json(response)
-                        }
-                    }
-                    else{
-                        console.log("No Paiements")
-                        res.json({msgErr : "No Paiements"})
-                    }
-                })
-            /*}
-            else{
-                console.log("Invalid Token")
-                res.json({msgErr : "Invalid Token"})
+        const refLogement = req.params.refLogement
+        const sqlQuery = `CALL data_Cotisation_Bylogement('${refLogement}') ;`  
+        pool.query(sqlQuery, (err, response) => {
+            if(!err){
+                if(response.length !== 0){
+                    console.log(response)
+                    res.json(response)
+                }
             }
-        }
-        else{
-            console.log("No Token at all")
-            res.json({msgErr : "No Token at all"})
-        }*/
+            else{
+                console.log("No Paiements")
+                res.json({msgErr : "No Paiements"})
+            }
+        })
     })
 
 
@@ -229,7 +209,7 @@ router.route('/copro/NumCompte/:id')
 
 
 /////// Create PDF File
-router.route('/create-pdf')
+/*router.route('/create-pdf')
     .post((req, res) => {
         const { compte } = req.body
         if(compte !== "" && compte !== undefined){
@@ -266,6 +246,6 @@ router.route('/fetch-pdf')
         catch(err){
             console.log("No Way .... ", err)
         }
-    })
+    })*/
 
 module.exports = router

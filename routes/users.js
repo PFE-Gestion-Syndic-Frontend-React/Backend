@@ -5,11 +5,7 @@ const saltRounds = 10 // used for Hashing length
 const fileUpload = require("express-fileupload")
 require("dotenv").config()
 const bodyparser = require("body-parser");
-const mysql = require("mysql");
 const cors = require("cors")
-const jwt = require("jsonwebtoken");
-const {authToken, authRole} = require('./../middleware')
-const multer = require('multer')
 
 
 
@@ -17,7 +13,7 @@ router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
 router.use(fileUpload())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
 
@@ -27,7 +23,6 @@ router.route("/up/image")
         if(req.files === null){
             console.log("No Photos Okey then")
         }
-
         //console.log(req.files)
         /*const file = req.files.file 
         console.log(file)
@@ -42,7 +37,7 @@ router.route("/up/image")
 
 
 ////// Create New Account
-router.route("/new", authRole("Administrateur"))
+router.route("/new")
     .post((req, res) => {
         const { nom, prenom, email, tele, role, fonc } = req.body
         if(nom !== "" && prenom !== "" && email !== "" && tele !== "" && role !== "" && fonc !== ""){
@@ -71,27 +66,20 @@ router.route("/new", authRole("Administrateur"))
     
 
 ////// Listing Users
-router.route("/all", authRole(["Administrateur"]))
+router.route("/all")
     .get((req, res) => {
-        const token = req.headers['authorization']
-        //if(token.length > 150){
-            const sqlQuery = "select NumCompte, NomCompte, PrenomCompte, Role, EmailCompte, telephone, fonc, photo from compte order by NumCompte desc ;"   
-            pool.query(sqlQuery, (err, data) => {
-                if(!err){
-                    if(data.length !== 0){
-                        res.json(data)
-                    }
+        const sqlQuery = "select NumCompte, NomCompte, PrenomCompte, Role, EmailCompte, telephone, fonc, photo from compte order by NumCompte desc ;"   
+        pool.query(sqlQuery, (err, data) => {
+            if(!err){
+                if(data.length !== 0){
+                    res.json(data)
                 }
-                else{
-                    res.json({msgErr : "No Users"})
-                    
-                }
-            })
-        /*}
-        else{
-            res.json({authorization : false})
-        }*/
-        
+            }
+            else{
+                res.json({msgErr : "No Users"})
+                
+            }
+        })
     })
 
 
@@ -249,7 +237,6 @@ router.route('/monCompte/edit/:id')
                 pool.query(sqlQuery, [ nom, prenom, tele, id], (err, resolve) => {
                     if(err) res.json({err : err})
                     if(resolve){
-                        //console.log(resolve)
                         res.json({data : resolve})
                     }
                     else{
@@ -268,7 +255,6 @@ router.route('/logement/cop')
         pool.query(sqlQuery, (err, data) => {
             if(!err){
                 if(data.length !== 0){
-                    //console.log(data)
                     res.json(data)
                 }
             }

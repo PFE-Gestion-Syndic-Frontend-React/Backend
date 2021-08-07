@@ -9,7 +9,7 @@ const pdfTemplate = require("./documents releve financier/index.js");
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
 router.route("/all")

@@ -1,20 +1,14 @@
 const express = require("express")
 let router = express.Router()
-const bcrypt = require("bcrypt")
-const saltRounds = 10 // used for Hashing length
-const fileUpload = require("express-fileupload")
 require("dotenv").config()
-const bodyparser = require("body-parser");
-const mysql = require("mysql");
+const bodyparser = require("body-parser")
 const cors = require("cors")
-const jwt = require("jsonwebtoken");
 
 
-router.use(bodyparser.urlencoded({extended: true}));
+router.use(bodyparser.urlencoded({extended: true}))
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(fileUpload())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 ////// Paiement espèce
 router.route('/new/espece')
@@ -138,105 +132,117 @@ router.route('/edit/:RefPaiement')
 /////// lister all Cotisations :
 router.route('/all')
     .get((req, res) => {
-        const token = req.headers['authorization']
-        if(token !== undefined && token !== ""){
-            if(token.length > 150){
-                const sqlQuery = "call data_Cotisation()"   
-                pool.query(sqlQuery, (err, data) => {
-                    if(!err){
-                        if(data.length !== 0){  
-                            res.json(data)
-                        }
-                    }
-                    else{
-                        console.log("No Paiements")
-                        res.json({msgErr : "No Paiements"})
-                    }
-                })
+        const sqlQuery = "call data_Cotisation()"   
+        pool.query(sqlQuery, (err, data) => {
+            if(!err){
+                if(data.length !== 0){  
+                    res.json(data)
+                }
             }
             else{
-                res.json({msgErr : "No Token"})
+                console.log("No Paiements")
+                res.json({msgErr : "No Paiements"})
             }
-        }
-        else{
-            res.json({msgErr : "No Token"})
-        }
+        })
     })
 
+//////////////////////////////////////////////////
+/////////// AJOUTER 2 APIS ID/RefLog /////////////
+router.route('/mesCotisations/:RefLogement/:id')
+    .get( async (req, res) => {
+        const {id, RefLogement} = req.params 
+        const sqlQuery = `call data_mes_cotisations_By_Log('${RefLogement}', '${id}')`   
+        await pool.query(sqlQuery, (err, data) => {
+            if(err){
+                if(err.sqlMessage === "Unknown column 'NaN' in 'field list'"){
+                    return res.send("TRY Later Oky")
+                }
+                else if(err.code === "ER_PARSE_ERROR"){
+                    return res.send("It's Not YOU Damn")
+                }
+            }
+            if(data){
+                if(data[0].length !== 0){
+                    return res.send(data[0])
+                }
+                else{
+                    return res.send("No Cotisation")
+                }
+            }
+        })
+    })
+
+
+//////////////////////////////////////////////////    
 /////////// LISTER MES COTISATIONS COPROPRIETAIRE :::::::::
 router.route('/mesCotisations/:id')
     .get( async (req, res) => {
-        const token = req.headers['authorization']
-        if(token !== undefined && token !== ""){
-            if(token.length > 150){
-                const {id} = req.params 
-                const sqlQuery = `call data_mes_cotisations('${id}')`   
-                await pool.query(sqlQuery, (err, data) => {
-                    if(err){
-                        if(err.sqlMessage === "Unknown column 'NaN' in 'field list'"){
-                            return res.send("TRY Later Oky")
-                        }
-                        else if(err.code === "ER_PARSE_ERROR"){
-                            return res.send("It's Not YOU Damn")
-                        }
-                    }
-                    if(data){
-                        if(data[0].length !== 0){
-                            return res.send(data[0])
-                        }
-                        else{
-                            return res.send("No Cotisation")
-                        }
-                    }
-                })
-
+        const {id, RefLogement} = req.params 
+        const sqlQuery = `call data_mes_cotisations('${id}')`   
+        await pool.query(sqlQuery, (err, data) => {
+            if(err){
+                if(err.sqlMessage === "Unknown column 'NaN' in 'field list'"){
+                    return res.send("TRY Later Oky")
+                }
+                else if(err.code === "ER_PARSE_ERROR"){
+                    return res.send("It's Not YOU Damn")
+                }
             }
-            else{
-                return res.send("Invalid Token")
+            if(data){
+                if(data[0].length !== 0){
+                    return res.send(data[0])
+                }
+                else{
+                    return res.send("No Cotisation")
+                }
             }
-        }
-        else{
-            return res.send("No Token at all")
-        }
+        })
     })
 
 ////////// SEARCH MES COTISATIONS BY :::::
 router.route('/mesCotisations/:id/:search')
     .get((req, res) => {
         const {id, search} = req.params
-        const token = req.headers['authorization']
-        if(token !== undefined && token !== ""){
-            if(token.length > 150){
-                if(search !== "" && id !== ""){
-                    const sqlQuery = `SELECT p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque from compte co, cheque c right JOIN paiement p on c.RefPaiement = p.RefPaiement INNER JOIN calendrier cal on cal.RefPaiement = p.RefPaiement WHERE co.NumCompte = ${id} and co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement ) and (p.RefPaiement LIKE '%${search}%' or co.NomCompte LIKE '%${search}%' OR co.PrenomCompte LIKE '%${search}%' OR p.MethodePaiement LIKE '%${search}%' OR p.datePaiement LIKE '%${search}%') ORDER by p.RefPaiement DESC;` 
-                    pool.query(sqlQuery, (err, data) => {
-                        if(err){
-                            if(err.sqlMessage === "Unknown column 'NaN' in 'field list'"){
-                                return res.send("TRY Later Oky")
-                            }
-                            else if(err.code === "ER_PARSE_ERROR"){
-                                return res.send("It's Not YOU Damn")
-                            }
-                        }
-                        if(data){
-                            if(data.length !== 0){
-                                return res.send(data)
-                            }
-                            else{
-                                return res.send("No Cotisation")
-                            }
-                        }
-                    })
+        if(search !== "" && id !== ""){
+            const sqlQuery = `SELECT p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque from compte co, cheque c right JOIN paiement p on c.RefPaiement = p.RefPaiement INNER JOIN calendrier cal on cal.RefPaiement = p.RefPaiement WHERE co.NumCompte = ${id} and co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement ) and (p.RefPaiement LIKE '%${search}%' or co.NomCompte LIKE '%${search}%' OR co.PrenomCompte LIKE '%${search}%' OR p.MethodePaiement LIKE '%${search}%' OR p.datePaiement LIKE '%${search}%') ORDER by p.RefPaiement DESC;` 
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    if(err.sqlMessage === "Unknown column 'NaN' in 'field list'"){
+                        return res.send("TRY Later Oky")
+                    }
+                    else if(err.code === "ER_PARSE_ERROR"){
+                        return res.send("It's Not YOU Damn")
+                    }
                 }
-            }
-            else{
-                return res.send("Invalid Token")
-            }
-        }
-        else{
-            return res.send("No Token at all")
+                if(data){
+                    if(data.length !== 0){
+                        return res.send(data)
+                    }
+                    else{
+                        return res.send("No Cotisation")
+                    }
+                }
+            })
+        } 
+    })
+
+///////// GetLastPaiement ::::
+router.route('/getLastPaiement/:log')
+    .get((req, res) => {
+        const log = req.params.log
+        if(log !== "" && log !== undefined){
+            const sqlQuery = `select p.RefPaiement, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.DU, cal.AU, ceil(datediff(CURRENT_DATE, cal.Au)/ 30) as difs from paiement p, calendrier cal WHERE cal.RefPaiement = p.RefPaiement AND p.RefLogement = '${log}' ORDER BY cal.RefCalendrier DESC LIMIT 1`
+            pool.query(sqlQuery, (err, result) => {
+                if(err) return res.send(err)
+                else if(result){
+                    return res.send(result)
+                }
+            })
         }
     })
+
+
+
 
 ////////// GETDATA By Paiement ::
 router.route('/getData/:RefPaiement')
@@ -324,34 +330,21 @@ router.route('/delete/:RefPaiement')
 router.route('/:search')
     .get((req, res) => {
         const search = req.params.search
-        const token = req.headers['authorization']
-        if(token !== undefined && token !== ""){
-            if(token.length > 150){
-                if(search !== ""){
-                    const sqlQuery = `SELECT p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque from compte co, cheque c right JOIN paiement p on c.RefPaiement = p.RefPaiement INNER JOIN calendrier cal on cal.RefPaiement = p.RefPaiement WHERE co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement ) and (p.RefPaiement LIKE '%${search}%' or co.NomCompte LIKE '%${search}%' OR co.PrenomCompte LIKE '%${search}%' OR p.MethodePaiement LIKE '%${search}%') ORDER by cal.RefCalendrier DESC;` 
-                    pool.query(sqlQuery, (err, data) => {
-                        if(err){
-                            return res.send(err)
-                        }
-                        if(data){
-                            if(data.length !== 0){
-                                return res.send(data)
-                            }
-                            else{
-                                return res.send("No Paiements")
-                            }
-                        }
-                    })
+        if(search !== ""){
+            const sqlQuery = `SELECT p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque from compte co, cheque c right JOIN paiement p on c.RefPaiement = p.RefPaiement INNER JOIN calendrier cal on cal.RefPaiement = p.RefPaiement WHERE co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement ) and (p.RefPaiement LIKE '%${search}%' or co.NomCompte LIKE '%${search}%' OR co.PrenomCompte LIKE '%${search}%' OR p.MethodePaiement LIKE '%${search}%') ORDER by cal.RefCalendrier DESC;` 
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    return res.send(err)
                 }
-            }
-            else{
-                console.log("Invalid Token")
-                res.json({msgErr : "Invalid Token"})
-            }
-        }
-        else{
-            console.log("No Token at all")
-            res.json({msgErr : "No Token at all"})
+                if(data){
+                    if(data.length !== 0){
+                        return res.send(data)
+                    }
+                    else{
+                        return res.send("No Paiements")
+                    }
+                }
+            })
         }
     })
 

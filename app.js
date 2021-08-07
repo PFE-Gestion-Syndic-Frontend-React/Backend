@@ -7,9 +7,8 @@ const app = express();
 const bcrypt = require("bcrypt")
 const saltRounds = 10 // used for Hashing length
 const jwt = require("jsonwebtoken");
-const fs = require('fs')
 const fileupload = require('express-fileupload')
-
+const nodemailer = require('nodemailer')
 
 /*const storage = multer.diskStorage({
     destination : (req, file, cb) => {
@@ -33,7 +32,7 @@ const statistiques = require('./routes/statistiques');
 const releves = require('./routes/releves')
 const path = require("path");
 
-const port = process.env.PORT_SERVER 
+const port = process.env.PORT_SERVER
 const client = process.env.PORT_CLIENT
 
 app.use(bodyparser.urlencoded({extended: true}));
@@ -52,7 +51,23 @@ app.use("/cotisations", cotisations)
 app.use("/statistiques", statistiques)
 app.use("/releves", releves)
 
-// Database API mySql 
+
+let transporter = nodemailer.createTransport({
+    service : "gmail",
+    auth : {
+        user : "gsc.noreplay@gmail.com", //process.env.USER_GMAIL,
+        pass : "Azerty19971121" //process.env.PWD_GMAIL
+    },
+    tls : {
+        rejectUnauthorized : false
+    }
+})
+
+// Database API mySql
+const host = process.env.HOST_DB
+const userDB = process.env.HOST_USER
+const DB = process.env.DATA
+
 pool = mysql.createPool({
     connectionLimit : 100,
     host : "localhost",
@@ -60,7 +75,6 @@ pool = mysql.createPool({
     password : '', 
     database : "db_syndicat"
 })
-
 
 
 ////////////// ENREGISTRER ANNONCE AVEC SES DOCS ///////
@@ -74,7 +88,7 @@ app.post('/upload/reclamation/:log/:objet/:message/:pour', async (req, res) => {
         if(log !== "" && objet !== "" && message !== "" && pour !== ""){
             const file = req.files.reclam 
             const NAMEFILE = Date.now() + "-" + file.name 
-            file.mv(`${__dirname}/../Client/public/reclamation support/${NAMEFILE}`, err => {
+            file.mv(`${__dirname}/public/reclamation support/${NAMEFILE}`, err => {
                 if(err){
                     if(err.code === "ENOENT" || err.syscall === "open"){
                         return res.send("Inserted")
@@ -124,7 +138,7 @@ app.post('/upload/annonce/:id/:sujet/:descripAnnonce', async (req, res) => {
             const idParsed = parseInt(id)
             const file = req.files.anonce 
             const NAMEFILE = Date.now() + "-" + file.name
-            file.mv(`${__dirname}/../Client/public/annonce doc/${NAMEFILE}`, err => {
+            file.mv(`${__dirname}/public/annonce doc/${NAMEFILE}`, err => {
                 if(err){
                     if(err.code === "ENOENT" || err.syscall === "open"){
                         return res.send("Inserted")
@@ -256,29 +270,39 @@ app.get("/getData/", (req, res) => {
 
 
 ////// To RESET The PASSWORD 
-app.post('/resetpwd', (req, res) => {
-    const { email, tele } = req.body
-    const SQLQuery = "select EmailCompte, telephone, NumCompte from compte where EmailCompte = ? and telephone = ? "
-    pool.query(SQLQuery, [email, tele], async (err, result) => {
-        if(err){
-            res.send(err)
-            console.log(err)
-        }
-        if(result){
-            console.log(result[0])
-            if(result.length > 0){
-                console.log("Yayy")
-                //res.send(result[0])
+app.get('/resetpwd/:email/:tele', (req, res) => {
+    const { email, tele } = req.params
+    if(email !== "" && email !== undefined && tele !== "" && tele !== undefined){
+        const SQLQuery = "select EmailCompte, telephone, NumCompte from compte where EmailCompte = ? and telephone = ? "
+        pool.query(SQLQuery, [email, tele], async (err, result) => {
+            if(err){
+                res.send(err)
+                console.log(err)
             }
-            else{
-                console.log('Nay')
-                res.send("Unfounded User")
+            if(result){
+                if(result.length > 0){
+                    let mailOptions = {
+                        from : "gsc.noreplay@gmail.com", //process.env.USER_GMAIL,
+                        to : email,
+                        subject : "Reset Password",
+                        text : `G.S.C à votre Service ! Bonjour ! Pour Changer Récuperer Votre Mot de Passe : Cliquer sur le Lien : http://localhost:3000/newPassword/${email}/${tele}/${result[0].NumCompte}  Attention : le lien sera expiré dans 10 min`
+                    }
+                    
+                    transporter.sendMail(mailOptions, function(err, success){
+                        if(err) {
+                            console.log(err)
+                        }
+                        else{
+                            res.send("Verify Your Email")
+                        }
+                    })
+                }
+                else{
+                    res.send("Unfounded User")
+                }
             }
-        }
-        let randomNumber = await Math.round(Math.random() * 999999)
-        res.send(randomNumber)
-        console.log(randomNumber)
-    })
+        })
+    }
 })
 
 
@@ -290,10 +314,9 @@ app.put('/upload/profile/:id', async (req, res) => {
     }
     else{
         const idParsed = parseInt(id)
-        const file = req.files.profile 
-        //console.log(file)
+        const file = req.files.profile
         const NAMEFILE = Date.now() + "-" + file.name
-        file.mv(`${__dirname}/../Client/public/profile img/${NAMEFILE}`, err => {
+        file.mv(`${__dirname}/public/profile img/${NAMEFILE}`, err => {
             if(err){
                 if(err.code === "ENOENT" || err.syscall === "open"){
                     return res.send("Inserted")

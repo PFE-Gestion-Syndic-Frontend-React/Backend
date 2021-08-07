@@ -1,20 +1,14 @@
 const express = require("express")
 let router = express.Router()
-const bcrypt = require("bcrypt")
-const saltRounds = 10 // used for Hashing length
-const fileUpload = require("express-fileupload")
 require("dotenv").config()
-const bodyparser = require("body-parser");
-const mysql = require("mysql");
+const bodyparser = require("body-parser")
 const cors = require("cors")
-const jwt = require("jsonwebtoken");
 
 
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
 router.use(express.json())
-router.use(fileUpload())
-router.use(cors({origin : 'http://localhost:3000', credentials : true}))
+router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
 ///// ENREGISTRER CATEGORIE
@@ -117,6 +111,35 @@ router.route("/new")
         }
     })
 
+//// group by dates
+router.route("/dates")
+    .get(async (req,res) => {
+        const sqlQuery = "select distinct month(dateDepense) as month, year(dateDepense) as year from depense order by dateDepense desc"
+        pool.query(sqlQuery, async (err, data) => {
+            if(err){
+                console.log(err)
+            }
+            if(data){
+                let arr = []
+                for(let i = 0; i < data.length; i++){
+                    const sqlquery = `call deps(${data[i].month}, ${data[i].year})`
+                    await pool.query(sqlquery, (er, result) => {
+                        if(er) return res.send(er)
+                        if(result){
+                            arr.push(result)
+                        }
+                    })
+                    setTimeout(() => {
+                        if(i === data.length - 1){
+                            return res.send(arr)
+                        }
+                    }, 1000);
+                }
+            }
+        })
+    })
+
+
 
 //// Lister All Dépenses
 router.route("/all")
@@ -217,30 +240,26 @@ router.route("/edit/:refDepense")
 
 /////// Delete Dépense
 router.route("/delete/:refDepense")
-    .delete((req, res, next) => {
+    .delete((req, res) => {
         const refDepense = req.params.refDepense
-        const sqlQuery = `delete from depense where RefDepense = ${refDepense} ;`
-        pool.query(sqlQuery, async (err, resolve) => {
-            if(err){
-                console.log(err)
-                res.json(err)
-            }
-            if(resolve){
-                if(resolve.message){
-                    res.json("Deleted ALL")
-                    next()
+        if(refDepense !== "" && refDepense !== undefined){
+            const sqlQuery = `delete from depense where RefDepense = ${refDepense} ;`
+            pool.query(sqlQuery, async (err, resolve) => {
+                if(err){
+                    console.log(err)
+                    res.json(err)
                 }
-            }
-            else{
-                res.json("No Resolving")
-            }
-        })
+                if(resolve){
+                    if(resolve.affectedRows === 1){
+                        res.send("Deleted")
+                    }
+                }
+                else{
+                    res.send("No Resolving")
+                }
+            })
+        }
     })
-
-
-
-
-
 
 
 module.exports = router
