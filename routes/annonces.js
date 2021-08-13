@@ -16,30 +16,23 @@ router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 ///// ENREGISTRER UNE ANNONCE
 router.route("/new/:id")
     .post((req, res) => {
-        const token = req.headers['authorization']
-        if(token.length > 150){
-            const { sujet, descripAnnonce} = req.body
-            const id = req.params.id
-            if(id !== "" && sujet !== "" && descripAnnonce !== ""){
-                const sqlQuery = `insert into annonce (NumCompte, Sujet, DescripAnnonce) values (${id} , ?, ?)`
-                pool.query(sqlQuery, [sujet, descripAnnonce], (err, resolve) => {
-                    if(err){ 
-                        return res.send("Failed") 
+        const { sujet, descripAnnonce} = req.body
+        const id = req.params.id
+        if(id !== "" && sujet !== "" && descripAnnonce !== ""){
+            const sqlQuery = `insert into annonce (NumCompte, Sujet, DescripAnnonce) values (${id} , ?, ?)`
+            pool.query(sqlQuery, [sujet, descripAnnonce], (err, resolve) => {
+                if(err){ 
+                    return res.send("Failed") 
+                }
+                if(resolve){
+                    if(resolve.affectedRows != 0){
+                        res.send("Inserted")
                     }
-                    if(resolve){
-                        if(resolve.affectedRows != 0){
-                            res.send("Inserted")
-                        }
-                        else{
-                            res.send("bad")
-                        }
+                    else{
+                        res.send("bad")
                     }
-                })
-            }
-        }
-        else{
-            console.log("No token !!")
-            res.json({msgErr : "No Token Set"})
+                }
+            })
         }
     })
 
@@ -47,70 +40,53 @@ router.route("/new/:id")
 //// Read all Announcements
 router.route('/all')
     .get((req, res) => {
-        const token = req.headers['authorization']
-        if(token.length > 150){
-            const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte order by a.RefAnnonce desc"   
-            pool.query(sqlQuery, (err, data) => {
-                if(!err){
-                    if(data.length !== 0){
-                        res.json(data)
-                    }
-                    else{
-                        res.json({msgErr : "No Announcement"})
-                    }
+        const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte order by a.RefAnnonce desc ;"   
+        pool.query(sqlQuery, (err, data) => {
+            if(!err){
+                if(data.length !== 0){
+                    res.json(data)
                 }
                 else{
-                    console.log("No Announcement for U")
-                    res.json({msgErr : "No Announcement"}) 
+                    res.json({msgErr : "No Announcement"})
                 }
-            })
-        }
-        else{
-            console.log("No token !!")
-            res.json({msgErr : "No Token Set"})
-        }
-    })
-
-
-
-//// Searching Annonces By ... 
-router.route("/:search")
-    .get((req, res) => {
-        const search = req.params.search
-        const token = req.headers['authorization']
-        if(token.length > 150){
-            if(search !== ""){
-                const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`
-                pool.query(sqlQuery, (err, data) => {
-                    if(err){
-                        res.json("Failed to load Data")
-                    }
-                    if(data){
-                        if(data.length !== 0){
-                            res.json(data)
-                        }
-                        else{
-                            res.json({msggg : "No Annonce"})
-                        }
-                    }
-                })
             }
-        }
-        else{
-            res.json({msgErr : "No Token Set"})
-        }
+            else{
+                res.json({msgErr : "No Announcement"}) 
+            }
+        })
     })
+
+
 
 ////// lister les annonces qui ont statut 1 
 router.route('/all/statut/true')
     .get((req, res) => {
-        const token = req.headers['authorization']
-        if(token.length > 150){
-            const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 order by a.RefAnnonce desc"   
+        const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 order by a.RefAnnonce desc"   
+        pool.query(sqlQuery, (err, data) => {
+            if(!err){
+                if(data.length > 0){
+                    res.send(data)
+                }
+                else{
+                    res.send("No Annonce")
+                }
+            }
+            else{
+                res.send("No Annonce")
+            }
+        })
+    })
+
+/////// Chercher les Annonces qui ont statut 1 et BY ......
+router.route('/all/statut/true/:search')
+    .get((req, res) => {
+        const search = req.params.search
+        if(search !== "" && search !== undefined){
+            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce, d.contenuDocument from compte c, document d right join annonce a on a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`   
             pool.query(sqlQuery, (err, data) => {
                 if(!err){
                     if(data.length > 0){
-                        res.send(data)
+                        res.json(data)
                     }
                     else{
                         res.send("No Annonce")
@@ -121,20 +97,47 @@ router.route('/all/statut/true')
                 }
             })
         }
-        else{
-            console.log("No token !!")
-            res.json({msgErr : "No Token Set"})
-        }
     })
 
-/////// Chercher les Annonces qui ont statut 1 et BY ......
-router.route('/all/statut/true/:search')
-    .get((req, res) => {
-        const token = req.headers['authorization']
-        if(token.length > 150){
-            const search = req.params.search
-            if(search !== "" && search !== undefined){
-                const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.DescripAnnonce, d.contenuDocument from compte c, document d right join annonce a on a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`   
+////// Periode For Copropriétaire ////// 
+router.route("/coproprietaire/periode")
+    .post((req,res) => {
+        const perd = req.body.perd 
+        if(perd !== undefined){
+            if(perd === 1){
+                const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and month(a.dateAnnonce) = month(CURRENT_TIMESTAMP) and year(a.dateAnnonce) = year(CURRENT_TIMESTAMP) order by a.RefAnnonce desc"
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Annonce")
+                        }
+                    }
+                    else{
+                        res.send("No Annonce")
+                    }
+                })
+            }
+            else if(perd === 3){
+                const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and datediff(CURRENT_TIMESTAMP, a.dateAnnonce) between 0 and 92 order by a.RefAnnonce desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Annonce")
+                        }
+                    }
+                    else{
+                        res.send("No Annonce")
+                    }
+                })
+            }
+            else if(perd === 6){
+                const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d RIGHT JOIN annonce a ON a.RefAnnonce = d.RefAnnonce where a.NumCompte = c.NumCompte  and a.statut = 1 and datediff(CURRENT_TIMESTAMP, a.dateAnnonce) between 0 and 183 order by a.RefAnnonce desc ;"
                 pool.query(sqlQuery, (err, data) => {
                     if(!err){
                         if(data.length > 0){
@@ -150,13 +153,63 @@ router.route('/all/statut/true/:search')
                 })
             }
         }
-        else{
-            console.log("No token !!")
-            res.json({msgErr : "No Token Set"})
-        }
     })
 
-
+////// Periode For Administrateur ////// 
+router.route("/admin/periode")
+    .post((req,res) => {
+        const perd = req.body.perd 
+        if(perd !== undefined){
+            if(perd === 1){
+                const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and month(a.dateAnnonce) = month(CURRENT_TIMESTAMP) and year(a.dateAnnonce) = year(CURRENT_TIMESTAMP) order by a.RefAnnonce desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Annonce")
+                        }
+                    }
+                    else{
+                        res.send("No Annonce")
+                    }
+                })
+            }
+            else if(perd === 3){
+                const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and datediff(CURRENT_TIMESTAMP, a.dateAnnonce) between 0 and 92 order by a.RefAnnonce desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Annonce")
+                        }
+                    }
+                    else{
+                        res.send("No Annonce")
+                    }
+                })
+            }
+            else if(perd === 6){
+                const sqlQuery = "select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and datediff(CURRENT_TIMESTAMP, a.dateAnnonce) between 0 and 183 order by a.RefAnnonce desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Annonce")
+                        }
+                    }
+                    else{
+                        res.send("No Annonce")
+                    }
+                })
+            }
+        }
+    })
 
 
 /////// ANNONCE BY RefAnnonce
@@ -226,6 +279,28 @@ router.route("/delete/:refAnnonce")
                 return res.send("No Resolving")
             }
         })
+    })
+
+//// Searching Annonces By ... 
+router.route("/:search")
+    .get((req, res) => {
+        const search = req.params.search
+        if(search !== ""){
+            const sqlQuery = `select c.NomCompte, c.PrenomCompte, a.RefAnnonce, a.dateAnnonce, a.Sujet, a.statut, a.DescripAnnonce, d.contenuDocument from compte c, document d right JOIN annonce a on d.RefAnnonce = a.RefAnnonce where a.NumCompte = c.NumCompte and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}%' or a.Sujet like '%${search}%' or a.DescripAnnonce like '%${search}%' ) order by a.RefAnnonce desc ;`
+            pool.query(sqlQuery, (err, data) => {
+                if(err){
+                    res.json("Failed to load Data")
+                }
+                if(data){
+                    if(data.length !== 0){
+                        res.json(data)
+                    }
+                    else{
+                        res.json({msggg : "No Annonce"})
+                    }
+                }
+            })
+        }
     })
 
 module.exports = router

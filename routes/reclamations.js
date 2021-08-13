@@ -40,7 +40,6 @@ router.route('/new')
 //// Lister All Réclamations :
 router.route('/all')
     .get((req, res) => {
-        const token = req.headers['authorization']
         const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement order by r.RefReclamation desc"   
         pool.query(sqlQuery, (err, data) => {
             if(!err){
@@ -99,10 +98,6 @@ router.route('/cops/all/:id/:search')
         }
     })
 
-
-
-
-
 /////// Mes Réclamations 
 router.route("/mesReclamations/all/:id")  
     .get((req, res) => {
@@ -124,7 +119,6 @@ router.route("/mesReclamations/all/:id")
             })
         }
     })
-
 
 /////// Search in ::: Mes Réclamations 
 router.route("/mesReclamations/all/:id/:searchBy")  
@@ -149,7 +143,6 @@ router.route("/mesReclamations/all/:id/:searchBy")
         }
     })
 
-
 //// Réclamation by RefReclamation
 router.route("/reclamation/:refReclamation")
     .get((req, res) => {
@@ -169,7 +162,6 @@ router.route("/reclamation/:refReclamation")
             }
         })
     })
-
 
 /////// UPDATE réclamation 
 router.route("/edit/:refReclamation")
@@ -200,7 +192,6 @@ router.route("/edit/:refReclamation")
         }
     })
 
-
 ////// Modifier ma Réclamations 
 router.route("/maReclamation/edit/:refReclamation")
     .put((req, res) => {
@@ -223,9 +214,6 @@ router.route("/maReclamation/edit/:refReclamation")
             console.log("UNRECEIVED")
         }
     })
-
-
-
 
 /////// RECLAMATION BY REFLOGEMENT 
 router.route('/logement/:refLogement')
@@ -269,6 +257,122 @@ router.route("/delete/:refReclamation")
             }
         })
     })
+
+/////// Réclamations Admin Periode :
+router.route("/admin/periode")
+    .post((req, res) => {
+        const perd = req.body.perd
+        if(perd !== undefined){
+            if(perd === 1){
+                const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and month(r.dateReclamation) = month(CURRENT_TIMESTAMP) AND year(r.dateReclamation) = year(CURRENT_TIMESTAMP) order by r.RefReclamation desc ;"   
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Réclamations")
+                        }
+                    }
+                    else{
+                        res.json({msgErr : "No Réclamations"})
+                    }
+                })
+            }
+            else if(perd === 3){
+                const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and datediff(CURRENT_TIMESTAMP, r.dateReclamation) between 0 and 92 order by r.RefReclamation desc ;"   
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Réclamations")
+                        }
+                    }
+                    else{
+                        res.json({msgErr : "No Réclamations"})
+                    }
+                })
+            }
+            else if(perd === 6){
+                const sqlQuery = "select r.RefReclamation, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement and datediff(CURRENT_TIMESTAMP, r.dateReclamation) between 0 and 183 order by r.RefReclamation desc ;"   
+                pool.query(sqlQuery, (err, data) => {
+                    if(!err){
+                        if(data.length > 0){
+                            res.json(data)
+                        }
+                        else{
+                            res.send("No Réclamations")
+                        }
+                    }
+                    else{
+                        res.json({msgErr : "No Réclamations"})
+                    }
+                })
+            }
+        }
+    })
+
+/////// Réclamations Copropriétaire PERIODE
+router.route("/copro/all/periode/:id")
+    .post((req, res) => {
+        const id = req.params.id
+        const perd = req.body.perd 
+        if(perd !== undefined){
+            if(perd === 1){
+                const sqlQuery = `select r.RefReclamation, c.NumCompte, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement AND ( c.NumCompte = ${id} OR r.pour = 'Public' ) AND month(r.dateReclamation) = month(CURRENT_TIMESTAMP) AND year(r.dateReclamation) = year(CURRENT_TIMESTAMP) order by r.RefReclamation desc ;`
+                pool.query(sqlQuery, id, (err, data) => {
+                    if(err){
+                        res.send(err)
+                    }
+                    if(data){
+                        if(data.length > 0){
+                            res.send(data)
+                        }
+                        else{
+                            res.send("No Réclamation")
+                        }
+                    }
+                }) 
+            }
+            else if(perd === 3){
+                const sqlQuery = `select r.RefReclamation, c.NumCompte, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement AND ( c.NumCompte = ${id} OR r.pour = 'Public' ) AND datediff(CURRENT_TIMESTAMP, r.dateReclamation) between 0 and 92 order by r.RefReclamation desc ;`
+                pool.query(sqlQuery, id, (err, data) => {
+                    if(err){
+                        res.send(err)
+                    }
+                    if(data){
+                        if(data.length > 0){
+                            res.send(data)
+                        }
+                        else{
+                            res.send("No Réclamation")
+                        }
+                    }
+                }) 
+            }
+            else if(perd === 6){
+                const sqlQuery = `select r.RefReclamation, c.NumCompte, c.NomCompte, c.PrenomCompte, r.Objet, r.Message, r.dateReclamation, r.statut, r.pour, s.contenu from compte c, logement l, support s right join reclamation r on s.RefReclamation = r.RefReclamation where c.NumCompte = l.NumCompteCop and l.RefLogement = r.RefLogement AND ( c.NumCompte = ${id} OR r.pour = 'Public' ) AND datediff(CURRENT_TIMESTAMP, r.dateReclamation) between 0 and 183 order by r.RefReclamation desc ;`
+                pool.query(sqlQuery, id, (err, data) => {
+                    if(err){
+                        res.send(err)
+                    }
+                    if(data){
+                        if(data.length > 0){
+                            res.send(data)
+                        }
+                        else{
+                            res.send("No Réclamation")
+                        }
+                    }
+                }) 
+            }
+        }
+    })
+
+
+
 
 
 

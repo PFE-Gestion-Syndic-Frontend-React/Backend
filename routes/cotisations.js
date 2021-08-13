@@ -3,7 +3,9 @@ let router = express.Router()
 require("dotenv").config()
 const bodyparser = require("body-parser")
 const cors = require("cors")
-
+const pdf = require('html-pdf')
+const pdfTemplate = require("./doc impaye/index.js");
+const pdfTemplates = require("./doc mes cotisations/index.js");
 
 router.use(bodyparser.urlencoded({extended: true}))
 router.use(bodyparser.json())
@@ -125,9 +127,50 @@ router.route('/edit/:RefPaiement')
         }
     })
 
-
-
-
+///////// Cotisations par Periode : 
+router.route('/periode')
+    .post((req, res) => {
+        const perd = req.body.perd
+        if(perd === 1){
+            const sqlQuery = "select p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque, a.NomCompte as NomAdmin, a.PrenomCompte as PrenomAdmin from compte co, compte a, calendrier cal, cheque c right join paiement p on c.RefPaiement = p.RefPaiement where a.NumCompte = p.NumCompte AND co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement) and cal.RefPaiement = p.RefPaiement and month(CURRENT_TIMESTAMP) = month(p.datePaiement) and year(CURRENT_TIMESTAMP) = year(p.datePaiement) ORDER BY cal.RefCalendrier DESC ;"   
+            pool.query(sqlQuery, (err, data) => {
+                if(!err){
+                    if(data.length !== 0){  
+                        res.json(data)
+                    }
+                }
+                else{
+                    res.json({msgErr : "No Paiements"})
+                }
+            })
+        }
+        else if(perd === 3){
+            const sqlQuery = "select p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque, a.NomCompte as NomAdmin, a.PrenomCompte as PrenomAdmin from compte co, compte a, calendrier cal, cheque c right join paiement p on c.RefPaiement = p.RefPaiement where a.NumCompte = p.NumCompte AND co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement) and cal.RefPaiement = p.RefPaiement and datediff(CURRENT_TIMESTAMP, p.datePaiement) between 0 and 92 ORDER BY cal.RefCalendrier DESC ;"   
+            pool.query(sqlQuery, (err, data) => {
+                if(!err){
+                    if(data.length !== 0){  
+                        res.json(data)
+                    }
+                }
+                else{
+                    res.json({msgErr : "No Paiements"})
+                }
+            })
+        }
+        else if(perd === 6){
+            const sqlQuery = "select p.RefPaiement, p.RefLogement, co.NomCompte, co.PrenomCompte, p.datePaiement, p.NbrMois, p.MethodePaiement, p.Montant, cal.Du, cal.Au, c.NumeroCheque, c.Banque, a.NomCompte as NomAdmin, a.PrenomCompte as PrenomAdmin from compte co, compte a, calendrier cal, cheque c right join paiement p on c.RefPaiement = p.RefPaiement where a.NumCompte = p.NumCompte AND co.NumCompte in (select l.NumCompteCop from logement l where l.RefLogement = p.RefLogement) and cal.RefPaiement = p.RefPaiement and datediff(CURRENT_TIMESTAMP, p.datePaiement) between 0 and 183 ORDER BY cal.RefCalendrier DESC ;"   
+            pool.query(sqlQuery, (err, data) => {
+                if(!err){
+                    if(data.length !== 0){  
+                        res.json(data)
+                    }
+                }
+                else{
+                    res.json({msgErr : "No Paiements"})
+                }
+            })
+        }
+    })
 
 /////// lister all Cotisations :
 router.route('/all')
@@ -270,7 +313,7 @@ router.route('/getImpayes')
                 return res.send(err)
             }
             if(resolve.length !== 0){
-                res.send(resolve[0])
+                res.json({res1 : resolve[0], res2 : resolve[1]})
             }
             else{
                 res.send("Not Found")
@@ -283,15 +326,16 @@ router.route('/getImpayes')
 router.route('/getImpayes/:searchBy')
     .get((req, res) => {
         const search = req.params.searchBy 
-        const sqlQuery = `SELECT c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, cal.Au as du, ceil(datediff(CURRENT_TIMESTAMP, cal.Au) / 30) as periode, date_add(cal.Au, INTERVAL ceil(datediff(CURRENT_TIMESTAMP, cal.Au) / 30) month) as todate, l.RefLogement, p.datePaiement, p.MethodePaiement, ch.NumeroCheque, ch.Banque FROM compte c, calendrier cal, logement l, paiement p LEFT JOIN cheque ch ON p.RefPaiement = ch.RefPaiement WHERE c.NumCompte = l.NumCompteCop AND p.RefLogement = l.RefLogement AND cal.RefPaiement = p.RefPaiement AND (c.NomCompte LIKE '%${search}%' OR c.PrenomCompte LIKE '%${search}%' OR c.EmailCompte LIKE '%${search}%' OR c.telephone LIKE '%${search}%' OR cal.Au LIKE '%${search}%' OR l.RefLogement LIKE '%${search}%' OR ch.NumeroCheque LIKE '%${search}%' OR ch.Banque LIKE '%${search}%') GROUP BY c.NumCompte HAVING cal.Au < CURRENT_TIMESTAMP() AND COUNT(l.RefLogement) < 2 ORDER BY cal.RefCalendrier DESC ;`
+        const sqlQuery1 = `SELECT c.NumCompte, c.NomCompte, c.PrenomCompte, c.EmailCompte, c.telephone, cal.Au as du, ceil(datediff(CURRENT_TIMESTAMP, cal.Au) / 30) as periode, date_add(cal.Au, INTERVAL ceil(datediff(CURRENT_TIMESTAMP, cal.Au) / 30) month) as todate, l.RefLogement, p.datePaiement, p.MethodePaiement, ch.NumeroCheque, ch.Banque FROM compte c, calendrier cal, logement l, paiement p LEFT JOIN cheque ch ON p.RefPaiement = ch.RefPaiement WHERE c.NumCompte = l.NumCompteCop AND p.RefLogement = l.RefLogement AND cal.RefPaiement = p.RefPaiement AND (c.NomCompte LIKE '%${search}%' OR c.PrenomCompte LIKE '%${search}%' OR c.EmailCompte LIKE '%${search}%' OR c.telephone LIKE '%${search}%' OR cal.Au LIKE '%${search}%' OR l.RefLogement LIKE '%${search}%' OR ch.NumeroCheque LIKE '%${search}%' OR ch.Banque LIKE '%${search}%') GROUP BY c.NumCompte HAVING cal.Au < CURRENT_TIMESTAMP() AND COUNT(l.RefLogement) < 2 ORDER BY cal.RefCalendrier DESC ;`
+        const sqlQuery = `call Get_Les_Imapayes_By('${search}')`
         pool.query(sqlQuery, (err, data) => {
             if(err){
                 console.log(err)
                 res.send(err)
             }
             if(data){
-                if(data.length > 0){
-                    res.send(data)
+                if(data.length !== 0){
+                    res.json({res1 : data[0], res2 : data[1]})
                 }
                 else{
                     res.send("Not Found")
@@ -321,6 +365,61 @@ router.route('/delete/:RefPaiement')
                     }
                 }
             })
+        }
+    })
+
+//////// Create PDF Modele pour les IMPAYES
+router.route('/impaye/create-pdf')
+    .post((req, res) => {
+        const sqlQuery = `call Get_All_Les_Impayes()`
+        pool.query(sqlQuery, (er, result) => {
+            if(er) return res.send(er)
+            if(result){
+                let impaye = result[0]
+                let never = result[1]
+                pdf.create(pdfTemplate(impaye, never), {}).toFile(`${__dirname}/doc impaye/impaye.pdf`, (err) => {
+                    if(err){
+                        res.send(Promise.reject())
+                    }
+                    res.send(Promise.resolve())
+                })
+            }
+        })
+    })
+
+////// Get The File 
+router.route('/impaye/fetch-pdf')
+    .get((req, res) =>{
+        try{
+            res.sendFile(`${__dirname}/doc impaye/impaye.pdf`)
+        }
+        catch(err){
+            console.log("No Way .... ", err)
+        }
+    })
+
+//////// Generate File PDF Ma Situation Financière en tant que Copropriétaire
+router.route('/maSituation/create-pdf')
+    .post((req, res) => {
+        const situation = req.body.data
+        if(situation !== "" && situation !== undefined){
+            pdf.create(pdfTemplates(situation), {}).toFile(`${__dirname}/doc mes cotisations/MaSituation.pdf`, err => {
+                if(err){
+                    res.send(Promise.reject())
+                }
+                res.send(Promise.resolve())
+            })
+        }
+    })
+
+//////// Get The File PDF Ma Situation Financière 
+router.route('/maSituation/fetch-pdf')
+    .get((req, res) =>{
+        try{
+            res.sendFile(`${__dirname}/doc mes cotisations/MaSituation.pdf`)
+        }
+        catch(err){
+            console.log("No Way .... ", err)
         }
     })
 

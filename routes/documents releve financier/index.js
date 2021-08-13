@@ -37,6 +37,7 @@ module.exports = (month, year, NbrCoti, MntCoti, depenses, NbrDep, MntDep) => {
                 <div class="col-md-6" style="margin-left: 170px;"></div>
             </div>
             <div class="container col-md-10 col-md-offset-1">
+                <img style="margin-left : 40%" src="G.S.C.png" alt="" width="160px" height="160px" />
                 <h3 style="font-size : 35px; text-align: center;"><strong>Situation Financièr Du ${month} - ${year} </strong></h3><br/><br/><br/>
                 <div class="container" style="margin-left : 200px; margin-right : 200px;">
                 <div class="row">

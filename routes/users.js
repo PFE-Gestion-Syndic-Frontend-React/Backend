@@ -264,5 +264,44 @@ router.route('/logement/cop')
         })
     })
 
+/////// Verify Compte Cop if that is related to logement
+router.route('/cops/hasNoLog')
+    .get((req, res) => {
+        const sqlQuery = "SELECT c.NumCompte, c.NomCompte, c.PrenomCompte FROM compte c WHERE c.Role = 'Copropriétaire' AND c.NumCompte NOT IN (SELECT l.NumCompteCop FROM logement l)"
+        pool.query(sqlQuery, (err, resolve) => {
+            if(err){
+                return res.send(err)
+            }
+            if(resolve){
+                if(resolve.length > 0){
+                    res.send(resolve)
+                }
+                else{
+
+                }
+            }
+        })
+    
+    })
+
+////// read all logements for the Copropriétaire /////
+router.route('/coproprietaire/logs/:id')
+    .get((req, res) => {
+        const id = req.params.id
+        const sqlQuery = "select RefLogement from logement where NumCompteCop = ?"
+        pool.query(sqlQuery, id, (err, resolve) => {
+            if(err){
+                res.send(err)
+            }
+            if(resolve){
+                if(resolve.length === 0){
+                    res.send("No Log")
+                }
+                else{
+                    res.send(resolve)
+                }
+            }
+        })
+    })
 
 module.exports = router

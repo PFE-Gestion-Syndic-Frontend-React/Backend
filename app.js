@@ -70,10 +70,10 @@ const DB = process.env.DATA
 
 pool = mysql.createPool({
     connectionLimit : 100,
-    host : "localhost",
-    user : "root",
-    password : '', 
-    database : "db_syndicat"
+    host : /*process.env.HOST_DB */ "localhost",
+    user : /*process.env.HOST_USER */ "root",
+    password : "", // process.env.PWD, 
+    database : /*process.env.DATA */ "db_syndicat"
 })
 
 

@@ -11,6 +11,63 @@ router.use(express.json())
 router.use(cors({origin : `http://localhost:3000`, credentials : true}))
 
 
+////// By Periode ////// 
+router.route("/periode")
+    .post((req,res) => {
+        const perd = req.body.perd 
+        if(perd !== undefined){
+            if(perd === 1){
+                const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' and month(d.dateDepense) = month(CURRENT_TIMESTAMP) and year(d.dateDepense) = year(CURRENT_TIMESTAMP) order by d.RefDepense desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(err) {
+                        return res.send(err)
+                    }
+                    if(data){
+                        if(data.length > 0){
+                            return res.json(data)
+                        }
+                        else{
+                            return res.send("No Dépense")
+                        }
+                    }
+                })
+            }
+            else if(perd === 3){
+                const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' and datediff(CURRENT_TIMESTAMP, d.dateDepense) between 0 and 92 order by d.RefDepense desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(err) {
+                        return res.send(err)
+                    }
+                    if(data){
+                        if(data.length > 0){
+                            return res.json(data)
+                        }
+                        else{
+                            return res.send("No Dépense")
+                        }
+                    }
+                })
+            }
+            else if(perd === 6){
+                const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' and datediff(CURRENT_TIMESTAMP, d.dateDepense) between 0 and 183 order by d.RefDepense desc ;"
+                pool.query(sqlQuery, (err, data) => {
+                    if(err) {
+                        return res.send(err)
+                    }
+                    if(data){
+                        if(data.length > 0){
+                            return res.json(data)
+                        }
+                        else{
+                            return res.send("No Dépense")
+                        }
+                    }
+                })
+            }
+        }
+    })
+
+
 ///// ENREGISTRER CATEGORIE
 router.route("/categorie/new")
     .post((req, res) => {
@@ -144,53 +201,20 @@ router.route("/dates")
 //// Lister All Dépenses
 router.route("/all")
     .get((req, res) => {
-        const token = req.headers['authorization']
-        if(token.length > 150){
-            const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' order by d.RefDepense desc ;"
-            pool.query(sqlQuery, (err, data) => {
-                if(!err){
-                    if(data.length !== 0){
-                        //console.log(data)
-                        res.json(data)
-                    }
+        const sqlQuery = "select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' order by d.RefDepense desc ;"
+        pool.query(sqlQuery, (err, data) => {
+            if(!err){
+                if(data.length !== 0){
+                    //console.log(data)
+                    res.json(data)
                 }
-                else{
-                    console.log("No Dépense")
-                    res.json( "No Dépense") 
-                }
-            })
-        }
-        else{
-            res.json({msgErr : "No Token Set"})
-        }
+            }
+            else{
+                console.log("No Dépense")
+                res.json( "No Dépense") 
+            }
+        })
     })
-
-
-//// Search dépense by ...
-router.route("/:search")
-    .get((req, res) => {
-        const search = req.params.search
-        if(search !== ""){
-            const sqlQuery = `select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}' or d.NomCategorie like '%${search}%' or d.dateDepense like '%${search}%' or d.facture like '%${search}%' or d.descriptionDepense like '%${search}%') order by d.RefDepense desc ;`
-            pool.query(sqlQuery, (err, resolve) => {
-                if(err){
-                    return res.send(err)
-                }
-                if(resolve){
-                    if(resolve.length > 0){
-                        return res.json(resolve)
-                    }
-                    else{
-                        return res.send("No Dépense")
-                    }
-                }
-            })
-        }
-    })
-
-
-
-
 
 ///// Get Dépense by RefDépense 
 router.route("/depense/:refDepense")
@@ -256,6 +280,28 @@ router.route("/delete/:refDepense")
                 }
                 else{
                     res.send("No Resolving")
+                }
+            })
+        }
+    })
+
+//// Search dépense by ...
+router.route("/:search")
+    .get((req, res) => {
+        const search = req.params.search
+        if(search !== ""){
+            const sqlQuery = `select d.RefDepense, c.NomCompte, c.PrenomCompte, d.NomCategorie, d.dateDepense, d.MontantDepense, d.facture, d.descriptionDepense from compte c, depense d where c.NumCompte = d.NumCompte and c.Role = 'Administrateur' and (c.NomCompte like '%${search}%' or c.PrenomCompte like '%${search}' or d.NomCategorie like '%${search}%' or d.dateDepense like '%${search}%' or d.facture like '%${search}%' or d.descriptionDepense like '%${search}%') order by d.RefDepense desc ;`
+            pool.query(sqlQuery, (err, resolve) => {
+                if(err){
+                    return res.send(err)
+                }
+                if(resolve){
+                    if(resolve.length > 0){
+                        return res.json(resolve)
+                    }
+                    else{
+                        return res.send("No Dépense")
+                    }
                 }
             })
         }
