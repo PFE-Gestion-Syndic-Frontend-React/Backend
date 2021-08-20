@@ -3,10 +3,6 @@ let router = express.Router()
 require("dotenv").config()
 const bodyparser = require("body-parser");
 const cors = require("cors")
-//const pdf = require('html-pdf')
-//const pdfTemplate = require("./documents situation coproprietaire")
-
-
 
 router.use(bodyparser.urlencoded({extended: true}));
 router.use(bodyparser.json())
@@ -98,7 +94,6 @@ router.route("/Coproprietaire/byEmail")
         })
     })
 
-
 // Searching users By ... 
 router.route("/:search")
     .get((req, res) => {
@@ -143,7 +138,6 @@ router.route("/coproprietaire/:refLogement")
         }
     })
 
-
 ////// Modifier Logement copropriétaire
 router.route('/edit/:refLogement')
     .put((req, res) => {
@@ -167,7 +161,6 @@ router.route('/edit/:refLogement')
             })
         }
     })
-
 
 ///// Details of cotisations of logement
 router.route('/info/:refLogement')

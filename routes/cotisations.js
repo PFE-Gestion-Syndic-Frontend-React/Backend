@@ -284,9 +284,6 @@ router.route('/getLastPaiement/:log')
         }
     })
 
-
-
-
 ////////// GETDATA By Paiement ::
 router.route('/getData/:RefPaiement')
     .get((req, res) => {
@@ -446,7 +443,5 @@ router.route('/:search')
             })
         }
     })
-
-
 
 module.exports = router

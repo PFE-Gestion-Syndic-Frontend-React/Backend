@@ -1,5 +1,5 @@
 module.exports = (impaye, never) => {
-    const todate = new Date()
+    const today = new Date()
     return `
     <!DOCTYPE html>
     <html>
@@ -75,7 +75,7 @@ module.exports = (impaye, never) => {
         </body>
         <footer>
             <div>
-                <h5 class="text-muted"></h5>
+                <h4 class="text-muted" style="margin-left : 70%">Le  ${new Intl.DateTimeFormat('fr-FR', {year: 'numeric', month: '2-digit',day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(today)} </h4>
             </div>
         </footer>
     </html> `

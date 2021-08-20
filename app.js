@@ -267,8 +267,6 @@ app.get("/getData/", (req, res) => {
     }
 })
 
-
-
 ////// To RESET The PASSWORD 
 app.get('/resetpwd/:email/:tele', (req, res) => {
     const { email, tele } = req.params
@@ -305,7 +303,6 @@ app.get('/resetpwd/:email/:tele', (req, res) => {
     }
 })
 
-
 /////// Edit Pic Photo
 app.put('/upload/profile/:id', async (req, res) => {
     const id = req.params.id
@@ -329,7 +326,7 @@ app.put('/upload/profile/:id', async (req, res) => {
             if(data){
                 if(data){
                     if(data.affectedRows !== 0){
-                        console.log("Inserted and Uploaded")
+                        //console.log("Inserted and Uploaded")
                     }
                     else{
                         console.log(resolve)
@@ -342,8 +339,6 @@ app.put('/upload/profile/:id', async (req, res) => {
         })
     }
 })
-
-
 
 ////// Edit My Account
 app.put('/monCompte/edit/:id', (req, res) => {
@@ -481,8 +476,5 @@ app.get('/me/:id', (req, res) => {
         }
     })
 })
-
-
-
 
 app.listen(port, ()=> console.log(`App running on ${port}` ));

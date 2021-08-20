@@ -1,4 +1,5 @@
 module.exports = (nom, prenom, tele, email, log, coti) => {
+    const today = Date.now();
     return `
         <!DOCTYPE html>
         <html>
@@ -32,6 +33,11 @@ module.exports = (nom, prenom, tele, email, log, coti) => {
                     }
                 </div>
             </body>
+            <footer>
+                <div>
+                    <h4 class="text-muted" style="margin-left : 70%">Le  ${new Intl.DateTimeFormat('fr-FR', {year: 'numeric', month: '2-digit',day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(today)} </h4>
+                </div>
+            </footer>
         </html>
     `
 }
